@@ -1,19 +1,67 @@
-use anyhow::Error;
+use std::collections::{BTreeMap, BTreeSet};
 
+use anyhow::Error;
+use itertools::Itertools;
+
+use crate::api_client::ApiClient;
 use crate::api_helpers;
-use crate::api_models::{Account, CredentialAccount};
+use crate::api_models::{Account, CredentialAccount, Relationship};
+
+const RELATIONSHIP_FETCH_CHUNK_SIZE: usize = 40;
 
 #[derive(Default)]
 pub struct ApiCache {
     follows: Option<Vec<Account>>,
+    relationships: BTreeMap<String, Relationship>,
 }
 
 impl ApiCache {
-    pub async fn get_follows(
+    pub async fn get_relationships(
         &mut self,
-        instance: &str,
-        client: &reqwest::Client,
-    ) -> Result<&[Account], Error> {
+        client: &ApiClient,
+        mut account_ids: BTreeSet<String>,
+    ) -> Result<Vec<Relationship>, Error> {
+        let mut result = Vec::new();
+
+        account_ids.retain(|id| {
+            if let Some(item) = self.relationships.get(id) {
+                result.push(item.clone());
+                false
+            } else {
+                true
+            }
+        });
+
+        for account_chunk in &account_ids
+            .into_iter()
+            .chunks(RELATIONSHIP_FETCH_CHUNK_SIZE)
+        {
+            let account_ids = account_chunk.collect_vec();
+
+            log::debug!("fetching relationships: {:?}", account_ids);
+
+            let chunk_result: Vec<Relationship> = client
+                .get("/api/v1/accounts/relationships")
+                .await
+                .header("content-type", "application/x-www-form-urlencoded")
+                .query(&account_ids.iter().map(|id| ("id[]", id)).collect_vec())
+                .send()
+                .await?
+                .error_for_status()?
+                .json()
+                .await?;
+
+            for relationship in chunk_result {
+                self.relationships
+                    .insert(relationship.id.clone(), relationship.clone());
+                result.push(relationship);
+            }
+        }
+
+        Ok(result)
+    }
+
+    pub async fn get_follows(&mut self, client: &ApiClient) -> Result<&[Account], Error> {
         if let Some(ref follows) = self.follows {
             return Ok(&follows);
         }
@@ -22,19 +70,20 @@ impl ApiCache {
 
         // TODO: cache that too
         let res: CredentialAccount = client
-            .get(format!("{}/api/v1/accounts/verify_credentials", instance))
+            .get("/api/v1/accounts/verify_credentials")
+            .await
             .send()
             .await?
             .error_for_status()?
             .json()
             .await?;
 
-        let mut url_opt = Some(format!("{}/api/v1/accounts/{}/following", instance, res.id));
+        let mut url_opt = Some(format!("/api/v1/accounts/{}/following", res.id));
 
         let mut result = Vec::new();
 
         while let Some(url) = url_opt.clone() {
-            let res = client.get(url).send().await?.error_for_status()?;
+            let res = client.get(&url).await.send().await?.error_for_status()?;
 
             let next_url = api_helpers::get_next_link(&res);
             let accounts: Vec<Account> = res.json().await?;

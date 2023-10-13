@@ -18,6 +18,12 @@ pub struct CredentialAccount {
     pub id: String,
 }
 
+#[derive(Deserialize, Debug, Clone)]
+pub struct Relationship {
+    pub id: String,
+    pub following: bool,
+    pub followed_by: bool,
+}
 
 #[test]
 fn test_deserialize_account() {

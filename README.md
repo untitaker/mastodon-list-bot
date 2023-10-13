@@ -9,6 +9,7 @@ Currently supported:
 
 * `#last_status_at<1d` -- contains all users which haven't posted in a day or more.
 * `#last_status_at<1w` -- contains all users which haven't posted in a week or more.
+* `#mutuals` -- contains all users who you follow and who also follow you.
 
 ## Usage
 
@@ -30,6 +31,11 @@ Then, run:
 ```
 cargo run
 ```
+
+## Problems
+
+Currently the client throttles itself to 1 request every 5 seconds to avoid
+rate limits at all costs.
 
 ## License
 
