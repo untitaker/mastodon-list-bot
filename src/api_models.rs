@@ -17,3 +17,17 @@ pub struct Account {
 pub struct CredentialAccount {
     pub id: String,
 }
+
+
+#[test]
+fn test_deserialize_account() {
+    let _account: Account = serde_json::from_str(
+        r##"
+    {
+      "id": "23634",
+      "last_status_at": "2019-11-17"
+    }
+    "##,
+    )
+    .unwrap();
+}
