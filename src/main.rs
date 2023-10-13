@@ -23,9 +23,7 @@ async fn main() -> Result<(), Error> {
 
     while let Some(url) = url_opt.clone() {
         let res = api_client
-            .get(&url)
-            .await
-            .send()
+            .get(&url, Box::new(|builder| builder))
             .await?
             .error_for_status()?;
 

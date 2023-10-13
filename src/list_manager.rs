@@ -3,7 +3,6 @@ use std::collections::BTreeSet;
 use anyhow::Error;
 use chrono::{Days, Local};
 use itertools::Itertools;
-use reqwest::multipart::Form;
 
 use crate::{api_cache::ApiCache, api_client::ApiClient, api_helpers, api_models};
 
@@ -66,7 +65,9 @@ impl ListManager {
             ListManagerKind::Mutuals => {
                 let follows = api_cache.get_follows(client).await?;
                 let follow_ids = follows.iter().map(|account| account.id.clone()).collect();
-                api_cache.get_relationships(client, follow_ids).await?
+                api_cache
+                    .get_relationships(client, follow_ids)
+                    .await?
                     .into_iter()
                     .filter(|relationship| relationship.following && relationship.followed_by)
                     .map(|relationship| relationship.id)
@@ -94,7 +95,10 @@ impl ListManager {
         let num_new_accounts = new_member_ids.len();
 
         while let Some(url) = url_opt.clone() {
-            let res = client.get(&url).await.send().await?.error_for_status()?;
+            let res = client
+                .get(&url, Box::new(|builder| builder))
+                .await?
+                .error_for_status()?;
 
             let next_url = api_helpers::get_next_link(&res);
             let accounts: Vec<api_models::Account> = res.json().await?;
@@ -123,16 +127,18 @@ impl ListManager {
                 account_ids
             );
 
-            let mut formdata = Form::new();
-            for id in account_ids {
-                formdata = formdata.text("account_ids[]", id);
-            }
-
             client
-                .post(&format!("/api/v1/lists/{}/accounts", self.list.id))
-                .await
-                .multipart(formdata)
-                .send()
+                .post(
+                    &format!("/api/v1/lists/{}/accounts", self.list.id),
+                    Box::new(move |builder| {
+                        builder.form(
+                            &account_ids
+                                .iter()
+                                .map(|id| ("account_ids[]", id))
+                                .collect_vec(),
+                        )
+                    }),
+                )
                 .await?
                 .error_for_status()?;
         }
@@ -146,22 +152,27 @@ impl ListManager {
                 account_ids
             );
 
-            let mut formdata = Form::new();
-
-            for id in account_ids {
-                formdata = formdata.text("account_ids[]", id);
-            }
-
             client
-                .delete(&format!("/api/v1/lists/{}/accounts", self.list.id))
-                .await
-                .multipart(formdata)
-                .send()
+                .delete(
+                    &format!("/api/v1/lists/{}/accounts", self.list.id),
+                    Box::new(move |builder| {
+                        builder.form(
+                            &account_ids
+                                .iter()
+                                .map(|id| ("account_ids[]", id))
+                                .collect_vec(),
+                        )
+                    }),
+                )
                 .await?
                 .error_for_status()?;
         }
 
-        log::info!("done syncing, went from {} to {} members", num_old_accounts, num_new_accounts);
+        log::info!(
+            "done syncing, went from {} to {} members",
+            num_old_accounts,
+            num_new_accounts
+        );
 
         Ok(())
     }

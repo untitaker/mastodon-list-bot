@@ -32,11 +32,6 @@ Then, run:
 cargo run
 ```
 
-## Problems
-
-Currently the client throttles itself to 1 request every 5 seconds to avoid
-rate limits at all costs.
-
 ## License
 
 MIT

@@ -41,11 +41,14 @@ impl ApiCache {
             log::debug!("fetching relationships: {:?}", account_ids);
 
             let chunk_result: Vec<Relationship> = client
-                .get("/api/v1/accounts/relationships")
-                .await
-                .header("content-type", "application/x-www-form-urlencoded")
-                .query(&account_ids.iter().map(|id| ("id[]", id)).collect_vec())
-                .send()
+                .get(
+                    "/api/v1/accounts/relationships",
+                    Box::new(move |builder| {
+                        builder
+                            .header("content-type", "application/x-www-form-urlencoded")
+                            .query(&account_ids.iter().map(|id| ("id[]", id)).collect_vec())
+                    }),
+                )
                 .await?
                 .error_for_status()?
                 .json()
@@ -70,9 +73,10 @@ impl ApiCache {
 
         // TODO: cache that too
         let res: CredentialAccount = client
-            .get("/api/v1/accounts/verify_credentials")
-            .await
-            .send()
+            .get(
+                "/api/v1/accounts/verify_credentials",
+                Box::new(|builder| builder),
+            )
             .await?
             .error_for_status()?
             .json()
@@ -83,7 +87,10 @@ impl ApiCache {
         let mut result = Vec::new();
 
         while let Some(url) = url_opt.clone() {
-            let res = client.get(&url).await.send().await?.error_for_status()?;
+            let res = client
+                .get(&url, Box::new(|builder| builder))
+                .await?
+                .error_for_status()?;
 
             let next_url = api_helpers::get_next_link(&res);
             let accounts: Vec<Account> = res.json().await?;

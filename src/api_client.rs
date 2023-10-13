@@ -1,16 +1,14 @@
-use std::time::Duration;
-
 use anyhow::{Context, Error};
-use async_throttle::MultiRateLimiter;
+use backoff::future::retry_notify;
+use backoff::ExponentialBackoff;
 use reqwest::{
     header::{HeaderMap, HeaderValue},
-    Client, Method, RequestBuilder,
+    Client, Method, RequestBuilder, Response, StatusCode,
 };
 
 pub struct ApiClient {
     client: Client,
     instance: String,
-    rate_limiter: MultiRateLimiter<&'static str>,
 }
 
 impl ApiClient {
@@ -32,35 +30,68 @@ impl ApiClient {
             .default_headers(headers)
             .build()?;
 
-        let period = Duration::from_secs(5);
-
-        Ok(ApiClient {
-            client,
-            instance,
-            rate_limiter: MultiRateLimiter::new(period),
-        })
+        Ok(ApiClient { client, instance })
     }
 
-    pub async fn request(&self, method: Method, url: impl Into<String>) -> RequestBuilder {
+    pub async fn request(
+        &self,
+        method: Method,
+        url: impl Into<String>,
+        builder_fn: RequestBuilderFunction,
+    ) -> Result<Response, reqwest::Error> {
         let mut url = url.into();
         if url.starts_with('/') {
             url = format!("{}{}", self.instance, url);
         }
 
-        self.rate_limiter
-            .throttle("api", || async { self.client.request(method, url) })
-            .await
+        retry_notify(
+            ExponentialBackoff::default(),
+            || async {
+                let request_builder = self.client.request(method.clone(), url.clone());
+
+                let response = builder_fn(request_builder)
+                    .send()
+                    .await
+                    .map_err(backoff::Error::permanent)?;
+
+                if response.status() == StatusCode::TOO_MANY_REQUESTS {
+                    return Err(backoff::Error::transient(
+                        response.error_for_status().unwrap_err(),
+                    ));
+                };
+
+                Ok(response)
+            },
+            |_err, dur| {
+                log::warn!("encountered rate limit, backing off for {:?}", dur);
+            },
+        )
+        .await
     }
 
-    pub async fn get(&self, route: &str) -> RequestBuilder {
-        self.request(Method::GET, route).await
+    pub async fn get(
+        &self,
+        route: &str,
+        builder_fn: RequestBuilderFunction,
+    ) -> Result<Response, reqwest::Error> {
+        self.request(Method::GET, route, builder_fn).await
     }
 
-    pub async fn post(&self, route: &str) -> RequestBuilder {
-        self.request(Method::POST, route).await
+    pub async fn post(
+        &self,
+        route: &str,
+        builder_fn: RequestBuilderFunction,
+    ) -> Result<Response, reqwest::Error> {
+        self.request(Method::POST, route, builder_fn).await
     }
 
-    pub async fn delete(&self, route: &str) -> RequestBuilder {
-        self.request(Method::DELETE, route).await
+    pub async fn delete(
+        &self,
+        route: &str,
+        builder_fn: RequestBuilderFunction,
+    ) -> Result<Response, reqwest::Error> {
+        self.request(Method::DELETE, route, builder_fn).await
     }
 }
+
+type RequestBuilderFunction = Box<dyn Fn(RequestBuilder) -> RequestBuilder>;
