@@ -12,3 +12,8 @@ pub struct Account {
     pub id: String,
     pub last_status_at: Option<NaiveDate>,
 }
+
+#[derive(Deserialize, Debug)]
+pub struct CredentialAccount {
+    pub id: String,
+}

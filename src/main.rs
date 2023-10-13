@@ -3,16 +3,11 @@ use reqwest::{
     header::{HeaderMap, HeaderValue},
     Client,
 };
-use serde::Deserialize;
 
+mod api_cache;
 mod api_helpers;
 mod api_models;
 mod list_manager;
-
-#[derive(Deserialize, Debug)]
-struct CredentialAccount {
-    id: String,
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -63,35 +58,12 @@ async fn main() -> Result<(), Error> {
         return Ok(());
     }
 
-    let res: CredentialAccount = client
-        .get(format!("{}/api/v1/accounts/verify_credentials", instance))
-        .send()
-        .await?
-        .error_for_status()?
-        .json()
-        .await?;
-
-    log::info!("fetching all your follows");
-
-    let mut url_opt = Some(format!("{}/api/v1/accounts/{}/following", instance, res.id));
-
-    while let Some(url) = url_opt.clone() {
-        let res = client.get(url).send().await?.error_for_status()?;
-
-        let next_url = api_helpers::get_next_link(&res);
-        let accounts: Vec<api_models::Account> = res.json().await?;
-
-        for account in accounts {
-            for list_manager in &mut list_managers {
-                list_manager.consider_as_member(&account);
-            }
-        }
-
-        url_opt = next_url;
-    }
+    let mut api_cache = api_cache::ApiCache::default();
 
     for mut manager in list_managers {
-        manager.sync_list(&instance, &client).await?;
+        manager
+            .sync_list(&instance, &client, &mut api_cache)
+            .await?;
     }
 
     Ok(())
