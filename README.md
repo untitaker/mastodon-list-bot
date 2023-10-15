@@ -58,6 +58,15 @@ only be one `#` in the name.
 List clauses can not be composed, so creating a list of mutuals who haven't
 posted in a week is not possible right now.
 
+## Future plans
+
+I want to keep experimenting with this on my own account for now, but am
+looking for ways to expose this as some kind of service to other users.
+
+However, this program hammers the API a lot. At a minimum, there would have to
+be a way to throttle updates, which currently doesn't exist, and ideally both
+on a per-user and a per-instance basis.
+
 ## License
 
 MIT
