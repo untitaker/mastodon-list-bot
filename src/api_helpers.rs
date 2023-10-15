@@ -8,5 +8,5 @@ static LINK_REL_NEXT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r#"<(.+?)>; rel="
 
 pub fn get_next_link(res: &reqwest::Response) -> Option<String> {
     let link_header = res.headers().get("Link")?.to_str().ok()?;
-    Some(LINK_REL_NEXT_RE.captures(&*link_header)?[1].to_owned())
+    Some(LINK_REL_NEXT_RE.captures(link_header)?[1].to_owned())
 }

@@ -66,7 +66,7 @@ impl ApiCache {
 
     pub async fn get_follows(&mut self, client: &ApiClient) -> Result<&[Account], Error> {
         if let Some(ref follows) = self.follows {
-            return Ok(&follows);
+            return Ok(follows);
         }
 
         log::info!("fetching all your follows");
