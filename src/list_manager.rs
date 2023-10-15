@@ -1,4 +1,5 @@
 use std::collections::BTreeSet;
+use std::str::FromStr;
 
 use anyhow::Error;
 use chrono::{Days, Local};
@@ -8,10 +9,37 @@ use crate::{api_cache::ApiCache, api_client::ApiClient, api_helpers, api_models}
 
 const UPDATE_CHUNK_SIZE: usize = 250;
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 enum ListManagerKind {
-    LastStatus1d,
-    LastStatus1w,
+    LastStatus(Days),
     Mutuals,
+}
+
+impl FromStr for ListManagerKind {
+    type Err = pom::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use pom::parser::*;
+
+        let date_parser = one_of(b"123456789").repeat(1..2) + one_of(b"dwm");
+        let last_status_at_parser = seq(b"last_status_at>")
+            * date_parser.map(|(number, unit)| {
+                let unit = match unit {
+                    b'd' => 1,
+                    b'w' => 7,
+                    b'm' => 30,
+                    _ => unreachable!(),
+                };
+
+                let number = String::from_utf8(number).unwrap().parse::<u64>().unwrap();
+
+                ListManagerKind::LastStatus(Days::new(number * unit))
+            });
+        let mutuals_parser = seq(b"mutuals").map(|_| ListManagerKind::Mutuals);
+        let clause_parser = last_status_at_parser | mutuals_parser;
+        let parser = none_of(b"#").repeat(0..).discard() * sym(b'#') * clause_parser;
+        parser.parse(s.as_bytes())
+    }
 }
 
 pub struct ListManager {
@@ -25,12 +53,8 @@ impl ListManager {
     }
 
     pub fn parse(list: api_models::List) -> Option<Self> {
-        match list.title.as_str() {
-            "#last_status_at<1d" => Some(Self::new(list, ListManagerKind::LastStatus1d)),
-            "#last_status_at<1w" => Some(Self::new(list, ListManagerKind::LastStatus1w)),
-            "#mutuals" => Some(Self::new(list, ListManagerKind::Mutuals)),
-            _ => None,
-        }
+        let parsed = list.title.parse().ok()?;
+        Some(Self::new(list, parsed))
     }
 
     async fn get_new_member_ids(
@@ -39,29 +63,18 @@ impl ListManager {
         api_cache: &mut ApiCache,
     ) -> Result<BTreeSet<String>, Error> {
         let result = match self.kind {
-            ListManagerKind::LastStatus1d => api_cache
+            ListManagerKind::LastStatus(days) => api_cache
                 .get_follows(client)
                 .await?
                 .iter()
                 .filter(|account| {
                     account
                         .last_status_at
-                        .map_or(true, |x| x < Local::now().date_naive() - Days::new(1))
+                        .map_or(true, |x| x < Local::now().date_naive() - days)
                 })
                 .map(|account| account.id.clone())
                 .collect(),
 
-            ListManagerKind::LastStatus1w => api_cache
-                .get_follows(client)
-                .await?
-                .iter()
-                .filter(|account| {
-                    account
-                        .last_status_at
-                        .map_or(true, |x| x < Local::now().date_naive() - Days::new(7))
-                })
-                .map(|account| account.id.clone())
-                .collect(),
             ListManagerKind::Mutuals => {
                 let follows = api_cache.get_follows(client).await?;
                 let follow_ids = follows.iter().map(|account| account.id.clone()).collect();
@@ -176,4 +189,28 @@ impl ListManager {
 
         Ok(())
     }
+}
+
+#[test]
+fn parsing() {
+    assert_eq!(
+        ListManagerKind::from_str("#mutuals"),
+        Ok(ListManagerKind::Mutuals)
+    );
+    assert_eq!(
+        ListManagerKind::from_str("#last_status_at>2d"),
+        Ok(ListManagerKind::LastStatus(Days::new(2)))
+    );
+    assert_eq!(
+        ListManagerKind::from_str("#last_status_at>1w"),
+        Ok(ListManagerKind::LastStatus(Days::new(7)))
+    );
+    assert_eq!(
+        ListManagerKind::from_str("#last_status_at>1m"),
+        Ok(ListManagerKind::LastStatus(Days::new(30)))
+    );
+    assert_eq!(
+        ListManagerKind::from_str("hello #last_status_at>1m"),
+        Ok(ListManagerKind::LastStatus(Days::new(30)))
+    );
 }

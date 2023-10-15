@@ -1,0 +1,7 @@
+/target
+/testdata
+.git
+/node_modules
+/build
+.env
+.envrc
