@@ -19,6 +19,11 @@ jobs:
 
       - run: cargo fmt --check
 
+      - uses: volta-cli/action@v4
+
+      - run: yarn
+      - run: yarn build
+
       - uses: actions/cache@v3
         with:
           path: |
