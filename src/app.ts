@@ -4,7 +4,7 @@ import "./app.css";
 import App from "./svelte/App.svelte";
 
 const OAUTH_CLIENT_NAME = "Mastodon List Bot";
-const OAUTH_SCOPES = "read:follows read:lists write:lists";
+const OAUTH_SCOPES = "read:follows read:lists read:accounts write:lists";
 const SERVICE_BASE_URL = `${window.location.origin}${window.location.pathname}`;
 
 const launchLogin = async (baseUrl: string) => {
