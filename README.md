@@ -14,30 +14,9 @@ mutuals).
 Mastodon's solution to this is lists, but lists require curation and effort to
 maintain. So what if those lists updated themselves?
 
-## Usage as a service
+## How to use
 
-This bot is available as a webservice and currently in private beta. If you are
-interested in trying, [DM me on Mastodon](https://woodland.cafe/@untitaker).
-
-## Usage from CLI/self-hosting
-
-Create an empty list with the name `#last_status_at<1w`. The program will recognize it
-by its name, and overwrite its contents with users who haven't posted in a week.
-
-Go to Development in your Mastodon account, and create a new access token.
-
-Then, run:
-
-```
-RUST_LOG=info cargo run run-once --host=mastodon.social --token=...
-```
-
-Your list is now populated with new accounts. Run this program periodically to
-update it (this both adds and removes accounts).
-
-## All supported lists
-
-Currently supported:
+Create a list with any of the following names. The bot will then start populating it.
 
 * `#last_status_at<1d` -- contains all users which haven't posted in a **day** or more.
 * `#last_status_at<1w` -- contains all users which haven't posted in a **week** or more.
@@ -54,6 +33,27 @@ only be one `#` in the name.
 
 List clauses can not be composed, so creating a list of mutuals who haven't
 posted in a week is not possible right now.
+
+## Using the bot as a service
+
+This bot is available as a webservice and currently in private beta. If you are
+interested in trying, [DM me on Mastodon](https://woodland.cafe/@untitaker).
+
+## Using the bot from your own machine
+
+Create an empty list with the name `#last_status_at<1w`. The program will recognize it
+by its name, and overwrite its contents with users who haven't posted in a week.
+
+Go to Development in your Mastodon account, and create a new access token.
+
+Then, run:
+
+```
+RUST_LOG=info cargo run run-once --host=mastodon.social --token=...
+```
+
+Your list is now populated with new accounts. Run this program periodically to
+update it (this both adds and removes accounts).
 
 ## Future plans
 
