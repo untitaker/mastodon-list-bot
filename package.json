@@ -1,0 +1,33 @@
+{
+  "type": "module",
+  "main": "index.tsx",
+  "name": "mastodon-list-bot",
+  "version": "0.1.0",
+  "description": "An app create programmatic lists in mastodon",
+  "repository": "git@github.com:untitaker/mastodon-list-bot.git",
+  "author": "Markus Unterwaditzer <markus-honeypot@unterwaditzer.net>",
+  "license": "MIT",
+  "dependencies": {
+    "@tsconfig/svelte": "^3.0.0",
+    "esbuild": "^0.17.2",
+    "esbuild-svelte": "^0.7.3",
+    "purecss": "^3.0.0",
+    "svelte": "^3.55.1",
+    "svelte-check": "^3.0.3",
+    "svelte-preprocess": "^5.0.1"
+  },
+  "scripts": {
+    "build": "node buildscript.js",
+    "typecheck": "svelte-check",
+    "dev": "find src/ | entr -sr 'yarn build && cargo sqlx prepare --database-url sqlite:accounts.db && cargo run serve --database accounts.db'",
+    "fmt": "prettier --write src/ && cargo fmt"
+  },
+  "devDependencies": {
+    "prettier": "^2.8.3",
+    "prettier-plugin-svelte": "^2.9.0"
+  },
+  "volta": {
+    "node": "18.13.0",
+    "yarn": "1.22.19"
+  }
+}

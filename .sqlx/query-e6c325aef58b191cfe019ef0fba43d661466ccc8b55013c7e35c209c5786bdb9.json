@@ -1,0 +1,56 @@
+{
+  "db_name": "SQLite",
+  "query": "select * from accounts where host = ?1 and username = ?2",
+  "describe": {
+    "columns": [
+      {
+        "name": "host",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "username",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "token",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 3,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "last_success_at",
+        "ordinal": 4,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "failure_count",
+        "ordinal": 5,
+        "type_info": "Int64"
+      },
+      {
+        "name": "last_error",
+        "ordinal": 6,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "e6c325aef58b191cfe019ef0fba43d661466ccc8b55013c7e35c209c5786bdb9"
+}

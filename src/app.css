@@ -1,0 +1,17 @@
+@import "../node_modules/purecss/build/base.css";
+@import "../node_modules/purecss/build/buttons.css";
+@import "../node_modules/purecss/build/forms.css";
+
+.content {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 0 10px;
+}
+
+.green {
+  color: rgb(28, 184, 65);
+}
+
+.red {
+  color: rgb(202, 60, 60);
+}

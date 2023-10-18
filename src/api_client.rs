@@ -1,4 +1,5 @@
-use anyhow::{Context, Error};
+use std::sync::Arc;
+
 use backoff::future::retry_notify;
 use backoff::ExponentialBackoff;
 use reqwest::{
@@ -6,17 +7,19 @@ use reqwest::{
     Client, Method, RequestBuilder, Response, StatusCode,
 };
 
+use crate::error::ResponseError;
+
 pub struct ApiClient {
     client: Client,
     instance: String,
 }
 
 impl ApiClient {
-    pub fn new(instance: String, token: String) -> Result<Self, Error> {
+    pub fn new(instance: &str, token: &str) -> Result<Self, ResponseError> {
         let mut headers = HeaderMap::new();
         headers.insert(
             "Authorization",
-            HeaderValue::from_str(&format!("Bearer {}", token)).context("invalid bearer token")?,
+            HeaderValue::from_str(&format!("Bearer {}", token))?,
         );
 
         headers.insert(
@@ -30,7 +33,10 @@ impl ApiClient {
             .default_headers(headers)
             .build()?;
 
-        Ok(ApiClient { client, instance })
+        Ok(ApiClient {
+            client,
+            instance: instance.to_owned(),
+        })
     }
 
     pub async fn request(
@@ -44,12 +50,14 @@ impl ApiClient {
             url = format!("{}{}", self.instance, url);
         }
 
+        let arc_builder_fn = Arc::new(builder_fn);
+
         retry_notify(
             ExponentialBackoff::default(),
             || async {
                 let request_builder = self.client.request(method.clone(), url.clone());
 
-                let response = builder_fn(request_builder)
+                let response = (arc_builder_fn.clone())(request_builder)
                     .send()
                     .await
                     .map_err(backoff::Error::permanent)?;
@@ -94,4 +102,4 @@ impl ApiClient {
     }
 }
 
-type RequestBuilderFunction = Box<dyn Fn(RequestBuilder) -> RequestBuilder>;
+type RequestBuilderFunction = Box<dyn Send + Sync + Fn(RequestBuilder) -> RequestBuilder>;

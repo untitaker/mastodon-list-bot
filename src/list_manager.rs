@@ -131,8 +131,12 @@ impl ListManager {
             url_opt = next_url;
         }
 
-        for account_chunk in &new_member_ids.iter().cloned().chunks(UPDATE_CHUNK_SIZE) {
-            let account_ids = account_chunk.collect_vec();
+        for account_chunk in new_member_ids
+            .into_iter()
+            .collect_vec()
+            .chunks(UPDATE_CHUNK_SIZE)
+        {
+            let account_ids = account_chunk.to_vec();
             log::debug!(
                 "syncing list {} ({}): adding accounts: {:?}",
                 self.list.id,
@@ -156,8 +160,8 @@ impl ListManager {
                 .error_for_status()?;
         }
 
-        for account_chunk in &to_delete.into_iter().chunks(UPDATE_CHUNK_SIZE) {
-            let account_ids = account_chunk.collect_vec();
+        for account_chunk in to_delete.chunks(UPDATE_CHUNK_SIZE) {
+            let account_ids = account_chunk.to_vec();
             log::debug!(
                 "syncing list {} ({}): deleting accounts: {:?}",
                 self.list.id,

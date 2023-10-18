@@ -32,11 +32,12 @@ impl ApiCache {
             }
         });
 
-        for account_chunk in &account_ids
+        for account_chunk in account_ids
             .into_iter()
+            .collect_vec()
             .chunks(RELATIONSHIP_FETCH_CHUNK_SIZE)
         {
-            let account_ids = account_chunk.collect_vec();
+            let account_ids = account_chunk.to_vec();
 
             log::debug!("fetching relationships: {:?}", account_ids);
 

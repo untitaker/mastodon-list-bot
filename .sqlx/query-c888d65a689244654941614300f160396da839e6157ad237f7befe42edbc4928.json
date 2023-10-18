@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "update accounts set\n                    failure_count = failure_count + 1,\n                    last_error = ?3\n                    where host = ?1 and username = ?2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "c888d65a689244654941614300f160396da839e6157ad237f7befe42edbc4928"
+}

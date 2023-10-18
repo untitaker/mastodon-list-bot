@@ -1,0 +1,56 @@
+{
+  "db_name": "SQLite",
+  "query": "select * from accounts\n            where (last_success_at is not null and failure_count < 10 and last_success_at < datetime('now', '-1 days'))\n            and failure_count < 10\n            limit 10",
+  "describe": {
+    "columns": [
+      {
+        "name": "host",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "username",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "token",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 3,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "last_success_at",
+        "ordinal": 4,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "failure_count",
+        "ordinal": 5,
+        "type_info": "Int64"
+      },
+      {
+        "name": "last_error",
+        "ordinal": 6,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "99f7d81310d200e13e81f4262645b2eaa35d2f6140218a6142641f95c335cdaa"
+}

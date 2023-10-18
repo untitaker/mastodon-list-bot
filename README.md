@@ -14,7 +14,12 @@ mutuals).
 Mastodon's solution to this is lists, but lists require curation and effort to
 maintain. So what if those lists updated themselves?
 
-## Usage
+## Usage as a service
+
+This bot is available as a webservice and currently in private beta. If you are
+interested in trying, [DM me on Mastodon](https://woodland.cafe/@untitaker).
+
+## Usage from CLI/self-hosting
 
 Create an empty list with the name `#last_status_at<1w`. The program will recognize it
 by its name, and overwrite its contents with users who haven't posted in a week.

@@ -16,6 +16,7 @@ pub struct Account {
 #[derive(Deserialize, Debug)]
 pub struct CredentialAccount {
     pub id: String,
+    pub username: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]

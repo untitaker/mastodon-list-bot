@@ -1,2 +1,5 @@
 /target
 .env
+/node_modules/
+accounts.db*
+/build/
