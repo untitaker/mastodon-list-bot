@@ -28,6 +28,12 @@ pub struct AccountPk {
     username: String,
 }
 
+impl AccountPk {
+    fn as_handle(&self) -> String {
+        format!("{}@{}", self.username, self.host)
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct Account {
     host: String,
@@ -136,7 +142,7 @@ impl Store {
         let handle = &mut immediate_syncs
             .entry(account_pk.clone())
             .or_insert_with(move || {
-                log::info!("immediate sync for account: {:?}", account);
+                log::info!("immediate sync for {}", account.primary_key().as_handle());
                 let slf = self.clone();
                 let account2 = account.clone();
                 let future = async move { slf.run_once_and_log(account).await? };
