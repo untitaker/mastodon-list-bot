@@ -6,8 +6,8 @@ use crate::api_helpers::get_next_link;
 use crate::api_models::List;
 use crate::list_manager::ListManager;
 
-pub async fn run_once(instance: &str, token: &str) -> Result<(), Error> {
-    let api_client = ApiClient::new(instance, token)?;
+pub async fn run_once(host: &str, token: &str) -> Result<(), Error> {
+    let api_client = ApiClient::new(host, token)?;
 
     log::info!("fetching all your lists");
 

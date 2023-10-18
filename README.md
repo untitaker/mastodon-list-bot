@@ -26,18 +26,10 @@ by its name, and overwrite its contents with users who haven't posted in a week.
 
 Go to Development in your Mastodon account, and create a new access token.
 
-Export these variables:
-
-```
-export MASTODON_INSTANCE=https://mastodon.social
-export MASTODON_TOKEN=...
-export RUST_LOG=info
-```
-
 Then, run:
 
 ```
-cargo run
+RUST_LOG=info cargo run run-once --host=mastodon.social --token=...
 ```
 
 Your list is now populated with new accounts. Run this program periodically to

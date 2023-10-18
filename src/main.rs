@@ -35,7 +35,7 @@ async fn main() -> Result<(), Error> {
 
     match cli.subcommand {
         Subcommand::RunOnce(run_once_cli) => {
-            runner::run_once(&run_once_cli.instance, &run_once_cli.token).await?;
+            runner::run_once(&run_once_cli.host, &run_once_cli.token).await?;
         }
         Subcommand::Serve(server) => {
             serve(server).await?;

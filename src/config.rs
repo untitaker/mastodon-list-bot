@@ -15,7 +15,7 @@ pub enum Subcommand {
 #[derive(Debug, Parser)]
 pub struct RunOnce {
     #[arg(long)]
-    pub instance: String,
+    pub host: String,
     #[arg(long)]
     pub token: String,
 }

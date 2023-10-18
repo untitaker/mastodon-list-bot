@@ -40,12 +40,6 @@ pub struct Account {
     last_error: Option<String>,
 }
 
-impl AccountPk {
-    pub fn instance(&self) -> String {
-        format!("https://{}", self.host)
-    }
-}
-
 #[derive(Deserialize)]
 pub struct RegisterAccount {
     host: String,
@@ -76,7 +70,7 @@ impl Store {
     }
 
     pub async fn register(&self, account: RegisterAccount) -> Result<Account, ResponseError> {
-        let client = ApiClient::new(&format!("https://{}", account.host), &account.token)?;
+        let client = ApiClient::new(&account.host, &account.token)?;
 
         let res: CredentialAccount = client
             .get(
@@ -160,7 +154,7 @@ impl Store {
     }
 
     async fn run_once_and_log(&self, account: Account) -> Result<Result<(), Error>, ResponseError> {
-        match crate::runner::run_once(&account.primary_key().instance(), &account.token).await {
+        match crate::runner::run_once(&account.host, &account.token).await {
             Ok(()) => {
                 sqlx::query!(
                     "update accounts set

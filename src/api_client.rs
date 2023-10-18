@@ -11,11 +11,11 @@ use crate::error::ResponseError;
 
 pub struct ApiClient {
     client: Client,
-    instance: String,
+    host: String,
 }
 
 impl ApiClient {
-    pub fn new(instance: &str, token: &str) -> Result<Self, ResponseError> {
+    pub fn new(host: &str, token: &str) -> Result<Self, ResponseError> {
         let mut headers = HeaderMap::new();
         headers.insert(
             "Authorization",
@@ -35,7 +35,7 @@ impl ApiClient {
 
         Ok(ApiClient {
             client,
-            instance: instance.to_owned(),
+            host: host.to_owned(),
         })
     }
 
@@ -47,7 +47,7 @@ impl ApiClient {
     ) -> Result<Response, reqwest::Error> {
         let mut url = url.into();
         if url.starts_with('/') {
-            url = format!("{}{}", self.instance, url);
+            url = format!("https://{}{}", self.host, url);
         }
 
         let arc_builder_fn = Arc::new(builder_fn);
