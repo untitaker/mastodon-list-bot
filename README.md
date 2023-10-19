@@ -55,14 +55,11 @@ RUST_LOG=info cargo run run-once --host=mastodon.social --token=...
 Your list is now populated with new accounts. Run this program periodically to
 update it (this both adds and removes accounts).
 
-## Future plans
+## Caveats
 
-I want to keep experimenting with this on my own account for now, but am
-looking for ways to expose this as some kind of service to other users.
-
-However, this program hammers the API a lot. At a minimum, there would have to
-be a way to throttle updates, which currently doesn't exist, and ideally both
-on a per-user and a per-instance basis.
+This bot hammers the API a lot during sync. It is likely that while it is
+running, it will encounter rate limits, which it will handle gracefully. Do not
+run this program more than once per day.
 
 ## License
 
