@@ -59,14 +59,16 @@ async fn serve(server_cli: Server) -> Result<(), Error> {
     let state = AppState { store };
 
     let _cronjob = tokio::spawn(async move {
-        match cronjob_store.sync_all_accounts().await {
-            Ok((success, failure)) => {
-                log::info!("cronjob: {} success, {} failure", success, failure)
+        loop {
+            match cronjob_store.sync_all_accounts().await {
+                Ok((success, failure)) => {
+                    log::info!("cronjob: {} success, {} failure", success, failure)
+                }
+                Err(e) => log::error!("failed to run cronjob: {:?}", e),
             }
-            Err(e) => log::error!("failed to run cronjob: {:?}", e),
-        }
 
-        tokio::time::sleep(Duration::from_secs(3600)).await;
+            tokio::time::sleep(Duration::from_secs(3600)).await;
+        }
     });
 
     let app = Router::new()
