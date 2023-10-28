@@ -38,7 +38,7 @@ posted in a week is not possible right now.
 
 This bot is available as a webservice at
 [list-bot.woodland.cafe](https://list-bot.woodland.cafe/). Sign in with
-Mastodon, create one of the lists above and click "Sync now" to get started.
+Mastodon and get started.
 
 ## Using the bot from your own machine
 
