@@ -47,7 +47,7 @@
       {#if accountInfo.last_success_at}
         <p>
           Your lists will be updated once per day automatically. Take a look at
-          the <a href="https://github.com/untitaker/mastodon-list-bot">README</a
+          the <a href="https://github.com/untitaker/mastodon-list-bot#how-to-use">README</a
           > to see which list names are supported.
         </p>
 
