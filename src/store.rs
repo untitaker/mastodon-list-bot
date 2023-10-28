@@ -121,7 +121,7 @@ impl Store {
     pub async fn sync_immediate(
         &self,
         account_pk: AccountPk,
-    ) -> Result<Option<Result<(), Error>>, ResponseError> {
+    ) -> Result<SyncImmediateResult, ResponseError> {
         let account = sqlx::query_as!(
             Account,
             "select * from accounts where host = ?1 and username = ?2",
@@ -131,13 +131,15 @@ impl Store {
         .fetch_one(&self.pool)
         .await?;
 
-        if account.last_success_at.map_or(false, |last_success_at| {
-            last_success_at > Utc::now().naive_utc() - Duration::minutes(30)
-        }) {
-            return Ok(Some(Err(anyhow::anyhow!("too many syncs"))));
-        }
-
         let mut immediate_syncs = self.immediate_syncs.lock().await;
+
+        if !immediate_syncs.contains_key(&account_pk) {
+            if let Some(last_success_at) = account.last_success_at {
+                if last_success_at > Utc::now().naive_utc() - Duration::minutes(30) {
+                    return Ok(SyncImmediateResult::TooMany);
+                }
+            }
+        }
 
         let handle = &mut immediate_syncs
             .entry(account_pk.clone())
@@ -151,12 +153,18 @@ impl Store {
             .1;
 
         if !handle.is_finished() {
-            return Ok(None);
+            return Ok(SyncImmediateResult::Pending);
         }
 
         let result = handle.await?;
         immediate_syncs.remove(&account_pk);
-        Ok(Some(result))
+
+        Ok(match result {
+            Ok(()) => SyncImmediateResult::Ok,
+            Err(e) => SyncImmediateResult::Error {
+                value: e.to_string(),
+            },
+        })
     }
 
     async fn run_once_and_log(&self, account: Account) -> Result<Result<(), Error>, ResponseError> {
@@ -231,4 +239,14 @@ impl Store {
 
         Ok((success_count, failure_count))
     }
+}
+
+#[derive(Serialize)]
+#[serde(tag = "type")]
+#[serde(rename_all = "snake_case")]
+pub enum SyncImmediateResult {
+    Ok,
+    Error { value: String },
+    Pending,
+    TooMany,
 }

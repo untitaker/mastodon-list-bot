@@ -36,8 +36,9 @@ posted in a week is not possible right now.
 
 ## Using the bot as a service
 
-This bot is available as a webservice and currently in private beta. If you are
-interested in trying, [DM me on Mastodon](https://woodland.cafe/@untitaker).
+This bot is available as a webservice at
+[list-bot.woodland.cafe](https://list-bot.woodland.cafe/). Sign in with
+Mastodon, create one of the lists above and click "Sync now" to get started.
 
 ## Using the bot from your own machine
 

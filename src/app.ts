@@ -32,8 +32,8 @@ const launchLogin = async (baseUrl: string) => {
 };
 
 type AccountInfo = {
-  host: string,
-  username: string,
+  host: string;
+  username: string;
 };
 
 const getAccountInfo = async () => {
@@ -77,9 +77,9 @@ const getAccountInfo = async () => {
     return false;
   }
 
-  const response2 = await fetch('/register', {
+  const response2 = await fetch("/register", {
     method: "POST",
-    body: new URLSearchParams({host: baseUrl, token: accessToken}),
+    body: new URLSearchParams({ host: baseUrl, token: accessToken }),
   });
 
   const json2 = await response2.json();
@@ -88,7 +88,7 @@ const getAccountInfo = async () => {
 };
 
 const syncImmediate = async (accountInfo: AccountInfo) => {
-  let response = await fetch('/sync-immediate', {
+  let response = await fetch("/sync-immediate", {
     method: "POST",
     body: new URLSearchParams(accountInfo),
   });

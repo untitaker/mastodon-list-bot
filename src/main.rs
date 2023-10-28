@@ -10,7 +10,6 @@ use axum::{
     Form, Json, Router,
 };
 use clap::Parser;
-use serde::Serialize;
 
 mod api_cache;
 mod api_client;
@@ -115,24 +114,10 @@ async fn register(
     Ok(Json(account).into_response())
 }
 
-#[derive(Serialize)]
-#[serde(rename = "snake_case")]
-enum SyncImmediateResult {
-    Ok,
-    Error(String),
-    Pending,
-}
-
 async fn sync_immediate(
     State(state): State<AppState>,
     Form(account_pk): Form<AccountPk>,
 ) -> Result<Response, ResponseError> {
-    let result = state.store.sync_immediate(account_pk).await?;
-    let body = match result {
-        Some(Ok(_)) => SyncImmediateResult::Ok,
-        Some(Err(e)) => SyncImmediateResult::Error(e.to_string()),
-        None => SyncImmediateResult::Pending,
-    };
-
+    let body = state.store.sync_immediate(account_pk).await?;
     Ok(Json(body).into_response())
 }
