@@ -18,9 +18,9 @@ maintain. So what if those lists updated themselves?
 
 Create a list with any of the following names. The bot will then start populating it.
 
-* `#last_status_at<1d` -- contains all users which haven't posted in a **day** or more.
-* `#last_status_at<1w` -- contains all users which haven't posted in a **week** or more.
-* `#last_status_at<1m` -- contains all users which haven't posted in a **month** or more.
+* `#last_status_at>1d` -- contains all users which haven't posted in a **day** or more.
+* `#last_status_at>1w` -- contains all users which haven't posted in a **week** or more.
+* `#last_status_at>1m` -- contains all users which haven't posted in a **month** or more.
 * `#mutuals` -- contains all users who you follow and who also follow you.
 
 Variations such as `2d`, `3d`, `8m` are permitted.
@@ -42,7 +42,7 @@ Mastodon and get started.
 
 ## Using the bot from your own machine
 
-Create an empty list with the name `#last_status_at<1w`. The program will recognize it
+Create an empty list with the name `#last_status_at>1w`. The program will recognize it
 by its name, and overwrite its contents with users who haven't posted in a week.
 
 Go to Development in your Mastodon account, and create a new access token.
