@@ -77,7 +77,7 @@
             <p>
               <a target="_blank" href={`https://${accountInfo.host}/lists`}
                 >create a list in Mastodon</a
-              >, for example <code>#last_status_at&lt;3d</code>
+              >, for example <code>#last_status_at&gt;3d</code>
             </p>
 
             <p>
