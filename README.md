@@ -31,8 +31,9 @@ specified string. For example, it is permitted to name a list `My best friends
 "machine-readable configuration" is still there. There can currently however
 only be one `#` in the name.
 
-List clauses can not be composed, so creating a list of mutuals who haven't
-posted in a week is not possible right now.
+List clauses can be composed:
+
+* `#last_status_at>1d & mutuals` -- contains all mutuals who haven't posted in a day or more.
 
 ## Using the bot as a service
 

@@ -10,20 +10,23 @@ use crate::{api_cache::ApiCache, api_client::ApiClient, api_helpers, api_models}
 const UPDATE_CHUNK_SIZE: usize = 250;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-enum ListManagerKind {
+enum ListManagerTerm {
     LastStatus(Days),
     Mutuals,
 }
 
-impl FromStr for ListManagerKind {
+#[derive(Debug, Clone, Eq, PartialEq)]
+struct ListManagerTerms(Vec<ListManagerTerm>); // and
+
+impl FromStr for ListManagerTerms {
     type Err = pom::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         use pom::parser::*;
 
-        let date_parser = one_of(b"123456789").repeat(1..2) + one_of(b"dwm");
-        let last_status_at_parser = seq(b"last_status_at>")
-            * date_parser.map(|(number, unit)| {
+        let whitespace = || sym(b' ').repeat(0..).discard();
+        let duration_days =
+            (one_of(b"123456789").repeat(1..2) + one_of(b"dwm")).map(|(number, unit)| {
                 let unit = match unit {
                     b'd' => 1,
                     b'w' => 7,
@@ -32,24 +35,32 @@ impl FromStr for ListManagerKind {
                 };
 
                 let number = String::from_utf8(number).unwrap().parse::<u64>().unwrap();
-
-                ListManagerKind::LastStatus(Days::new(number * unit))
+                Days::new(number * unit)
             });
-        let mutuals_parser = seq(b"mutuals").map(|_| ListManagerKind::Mutuals);
-        let clause_parser = last_status_at_parser | mutuals_parser;
-        let parser = none_of(b"#").repeat(0..).discard() * sym(b'#') * clause_parser;
+
+        let last_status_at =
+            seq(b"last_status_at>") * duration_days.map(ListManagerTerm::LastStatus);
+        let mutuals = seq(b"mutuals").map(|_| ListManagerTerm::Mutuals);
+        let term = last_status_at | mutuals;
+        let and_symbol = whitespace() + sym(b'&').repeat(1..) + whitespace();
+        let and_term = list(term, and_symbol).convert(|terms| match terms.len() {
+            0 => Err("empty filter"),
+            _ => Ok(ListManagerTerms(terms)),
+        });
+        let complex_term = and_term;
+        let parser = none_of(b"#").repeat(0..).discard() * sym(b'#') * complex_term;
         parser.parse(s.as_bytes())
     }
 }
 
 pub struct ListManager {
     list: api_models::List,
-    kind: ListManagerKind,
+    terms: ListManagerTerms,
 }
 
 impl ListManager {
-    fn new(list: api_models::List, kind: ListManagerKind) -> Self {
-        ListManager { list, kind }
+    fn new(list: api_models::List, terms: ListManagerTerms) -> Self {
+        ListManager { list, terms }
     }
 
     pub fn parse(list: api_models::List) -> Option<Self> {
@@ -62,31 +73,43 @@ impl ListManager {
         client: &ApiClient,
         api_cache: &mut ApiCache,
     ) -> Result<BTreeSet<String>, Error> {
-        let result = match self.kind {
-            ListManagerKind::LastStatus(days) => api_cache
-                .get_follows(client)
-                .await?
-                .iter()
-                .filter(|account| {
-                    account
-                        .last_status_at
-                        .map_or(true, |x| x < Local::now().date_naive() - days)
-                })
-                .map(|account| account.id.clone())
-                .collect(),
+        let mut first = true;
+        let mut result = BTreeSet::new();
 
-            ListManagerKind::Mutuals => {
-                let follows = api_cache.get_follows(client).await?;
-                let follow_ids = follows.iter().map(|account| account.id.clone()).collect();
-                api_cache
-                    .get_relationships(client, follow_ids)
+        for term in &self.terms.0 {
+            let term_result = match term {
+                ListManagerTerm::LastStatus(days) => api_cache
+                    .get_follows(client)
                     .await?
-                    .into_iter()
-                    .filter(|relationship| relationship.following && relationship.followed_by)
-                    .map(|relationship| relationship.id)
-                    .collect()
+                    .iter()
+                    .filter(|account| {
+                        account
+                            .last_status_at
+                            .map_or(true, |x| x < Local::now().date_naive() - *days)
+                    })
+                    .map(|account| account.id.clone())
+                    .collect(),
+
+                ListManagerTerm::Mutuals => {
+                    let follows = api_cache.get_follows(client).await?;
+                    let follow_ids = follows.iter().map(|account| account.id.clone()).collect();
+                    api_cache
+                        .get_relationships(client, follow_ids)
+                        .await?
+                        .into_iter()
+                        .filter(|relationship| relationship.following && relationship.followed_by)
+                        .map(|relationship| relationship.id)
+                        .collect()
+                }
+            };
+
+            if first {
+                result = term_result;
+                first = false;
+            } else {
+                result.retain(|x| term_result.contains(x));
             }
-        };
+        }
 
         Ok(result)
     }
@@ -198,23 +221,58 @@ impl ListManager {
 #[test]
 fn parsing() {
     assert_eq!(
-        ListManagerKind::from_str("#mutuals"),
-        Ok(ListManagerKind::Mutuals)
+        ListManagerTerms::from_str("#mutuals"),
+        Ok(ListManagerTerms(vec![ListManagerTerm::Mutuals]))
     );
     assert_eq!(
-        ListManagerKind::from_str("#last_status_at>2d"),
-        Ok(ListManagerKind::LastStatus(Days::new(2)))
+        ListManagerTerms::from_str("#last_status_at>2d"),
+        Ok(ListManagerTerms(vec![ListManagerTerm::LastStatus(
+            Days::new(2)
+        )]))
     );
     assert_eq!(
-        ListManagerKind::from_str("#last_status_at>1w"),
-        Ok(ListManagerKind::LastStatus(Days::new(7)))
+        ListManagerTerms::from_str("#last_status_at>1w"),
+        Ok(ListManagerTerms(vec![ListManagerTerm::LastStatus(
+            Days::new(7)
+        )]))
     );
     assert_eq!(
-        ListManagerKind::from_str("#last_status_at>1m"),
-        Ok(ListManagerKind::LastStatus(Days::new(30)))
+        ListManagerTerms::from_str("#last_status_at>1m"),
+        Ok(ListManagerTerms(vec![ListManagerTerm::LastStatus(
+            Days::new(30)
+        )]))
     );
     assert_eq!(
-        ListManagerKind::from_str("hello #last_status_at>1m"),
-        Ok(ListManagerKind::LastStatus(Days::new(30)))
+        ListManagerTerms::from_str("hello #last_status_at>1m"),
+        Ok(ListManagerTerms(vec![ListManagerTerm::LastStatus(
+            Days::new(30)
+        )]))
+    );
+}
+
+#[test]
+fn parsing_and() {
+    assert_eq!(ListManagerTerms::from_str("hello #").is_err(), true,);
+    assert_eq!(
+        ListManagerTerms::from_str("hello #last_status_at>1m&mutuals"),
+        Ok(ListManagerTerms(vec![
+            ListManagerTerm::LastStatus(Days::new(30)),
+            ListManagerTerm::Mutuals
+        ]))
+    );
+    assert_eq!(
+        ListManagerTerms::from_str("hello #last_status_at>1m & mutuals"),
+        Ok(ListManagerTerms(vec![
+            ListManagerTerm::LastStatus(Days::new(30)),
+            ListManagerTerm::Mutuals
+        ]))
+    );
+
+    assert_eq!(
+        ListManagerTerms::from_str("hello #last_status_at>1m && mutuals"),
+        Ok(ListManagerTerms(vec![
+            ListManagerTerm::LastStatus(Days::new(30)),
+            ListManagerTerm::Mutuals
+        ]))
     );
 }

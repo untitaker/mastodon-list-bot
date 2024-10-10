@@ -1,7 +1,7 @@
 use chrono::NaiveDate;
 use serde::Deserialize;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct List {
     pub id: String,
     pub title: String,
