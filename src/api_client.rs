@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{env, sync::Arc};
 
 use backoff::future::retry_notify;
 use backoff::ExponentialBackoff;
@@ -45,9 +45,21 @@ impl ApiClient {
         url: impl Into<String>,
         builder_fn: RequestBuilderFunction,
     ) -> Result<Response, reqwest::Error> {
+        let scheme = if matches!(
+            env::var("LIST_BOT_PLAINTEXT_HTTP")
+                .as_ref()
+                .map(String::as_str),
+            Ok("1")
+        ) {
+            "http"
+        } else {
+            "https"
+        };
+
         let mut url = url.into();
         if url.starts_with('/') {
-            url = format!("https://{}{}", self.host, url);
+            let host = &self.host;
+            url = format!("{scheme}://{host}{url}");
         }
 
         let arc_builder_fn = Arc::new(builder_fn);

@@ -1,5 +1,5 @@
 use chrono::NaiveDate;
-use serde::Deserialize;
+use serde::{de, de::Error as _, Deserialize, Deserializer};
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct List {
@@ -7,9 +7,21 @@ pub struct List {
     pub title: String,
 }
 
+// https://github.com/superseriousbusiness/gotosocial/issues/3418
+fn date_deserialize<'de, D>(deserializer: D) -> Result<Option<NaiveDate>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: Option<&str> = de::Deserialize::deserialize(deserializer).map_err(D::Error::custom)?;
+    let Some(s) = s else { return Ok(None) };
+    let (date, _) = NaiveDate::parse_and_remainder(s, "%Y-%m-%d").map_err(D::Error::custom)?;
+    Ok(Some(date))
+}
+
 #[derive(Deserialize, Debug, Clone)]
 pub struct Account {
     pub id: String,
+    #[serde(deserialize_with = "date_deserialize")]
     pub last_status_at: Option<NaiveDate>,
 }
 
