@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 use std::str::FromStr;
 
-use anyhow::Error;
+use anyhow::{Context, Error};
 use chrono::{Days, Local};
 use itertools::Itertools;
 
@@ -179,8 +179,10 @@ impl ListManager {
                         )
                     }),
                 )
-                .await?
-                .error_for_status()?;
+                .await
+                .context("failed to add members")?
+                .error_for_status()
+                .context("failed to add members")?;
         }
 
         for account_chunk in to_delete.chunks(UPDATE_CHUNK_SIZE) {
@@ -204,8 +206,10 @@ impl ListManager {
                         )
                     }),
                 )
-                .await?
-                .error_for_status()?;
+                .await
+                .context("failed to remove members")?
+                .error_for_status()
+                .context("failed to remove members")?;
         }
 
         log::info!(

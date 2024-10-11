@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use anyhow::Error;
+use anyhow::{Context, Error};
 use itertools::Itertools;
 
 use crate::api_client::ApiClient;
@@ -50,10 +50,13 @@ impl ApiCache {
                             .query(&account_ids.iter().map(|id| ("id[]", id)).collect_vec())
                     }),
                 )
-                .await?
-                .error_for_status()?
+                .await
+                .context("failed to get relationships")?
+                .error_for_status()
+                .context("failed to get relationships")?
                 .json()
-                .await?;
+                .await
+                .context("failed to parse relationships")?;
 
             for relationship in chunk_result {
                 self.relationships
@@ -78,10 +81,13 @@ impl ApiCache {
                 "/api/v1/accounts/verify_credentials",
                 Box::new(|builder| builder),
             )
-            .await?
-            .error_for_status()?
+            .await
+            .context("failed to get CredentialAccount")?
+            .error_for_status()
+            .context("failed to get CredentialAccount")?
             .json()
-            .await?;
+            .await
+            .context("failed to get CredentialAccount")?;
 
         let mut url_opt = Some(format!("/api/v1/accounts/{}/following", res.id));
 
@@ -90,11 +96,14 @@ impl ApiCache {
         while let Some(url) = url_opt.clone() {
             let res = client
                 .get(&url, Box::new(|builder| builder))
-                .await?
-                .error_for_status()?;
+                .await
+                .context("failed to get follows")?
+                .error_for_status()
+                .context("failed to get follows")?;
 
             let next_url = api_helpers::get_next_link(&res);
-            let accounts: Vec<Account> = res.json().await?;
+            let accounts: Vec<Account> =
+                res.json().await.context("failed to parse follows result")?;
 
             result.extend(accounts);
 
