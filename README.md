@@ -16,14 +16,35 @@ maintain. So what if those lists updated themselves?
 
 ## How to use
 
-Create a list with any of the following names. The bot will then start populating it.
+Create these lists to get started:
 
-* `#last_status_at>1d` -- contains all users which haven't posted in a **day** or more.
-* `#last_status_at>1w` -- contains all users which haven't posted in a **week** or more.
-* `#last_status_at>1m` -- contains all users which haven't posted in a **month** or more.
 * `#mutuals` -- contains all users who you follow and who also follow you.
+* `#last_status_at>1d & last_status_at<4d` -- contains all users who haven't
+  posted yesterday, but sometime within the past three days.
+* `#last_status_at>3d` -- contains all users who haven't posted in over three
+  days.
 
-Variations such as `2d`, `3d`, `8m` are permitted.
+Then, in the client of your choice, add those lists as columns or tabs, so you
+can easily switch between home timeline and alternative timelines. In Mastodon
+web they are already tabs, in [Phanpy](https://phanpy.social/) I recommend the
+column layout, in [Tusky](https://github.com/tuskyapp/Tusky/) you can add them
+as tabs as well.
+
+Then, head over to [list-bot.woodland.cafe](https://list-bot.woodland.cafe/)
+and sign in with your Mastodon account. Click sync, and the bot should start
+adding users to the list (asynchronously).
+
+The bot has been successfully tested on GoToSocial as well.
+
+## Syntax reference
+
+* `#last_status_at` supports days (`1d`), weeks (`1w`), months (`1m`). It does
+  not support numbers larger than 999 (`9999m` is invalid)
+* `#last_status_at` supports operators `<` and `>`. Other operators may be
+  added if it's useful, but so far it doesn't seem that it would be.
+* `#mutuals` takes no arguments of any kind.
+* Clauses can be chained with `&`. Other operators or parenthesis are not
+  supported.
 
 List names do not have to match exactly, they only have to end with the
 specified string. For example, it is permitted to name a list `My best friends
@@ -31,20 +52,10 @@ specified string. For example, it is permitted to name a list `My best friends
 "machine-readable configuration" is still there. There can currently however
 only be one `#` in the name.
 
-List clauses can be composed:
+## Self-hosting
 
-* `#last_status_at>1d & mutuals` -- contains all mutuals who haven't posted in a day or more.
-
-## Using the bot as a service
-
-This bot is available as a webservice at
-[list-bot.woodland.cafe](https://list-bot.woodland.cafe/). Sign in with
-Mastodon and get started.
-
-## Using the bot from your own machine
-
-Create an empty list with the name `#last_status_at>1w`. The program will recognize it
-by its name, and overwrite its contents with users who haven't posted in a week.
+list-bot comes as a CLI to put into crontab, and as a webservice. For
+single-user purposes, it's probably easier to run it from the CLI.
 
 Go to Development in your Mastodon account, and create a new access token.
 
@@ -54,8 +65,8 @@ Then, run:
 RUST_LOG=info cargo run run-once --host=mastodon.social --token=...
 ```
 
-Your list is now populated with new accounts. Run this program periodically to
-update it (this both adds and removes accounts).
+Your lists are now populated with new accounts. Run this program periodically
+to update it (this both adds and removes accounts).
 
 ## Caveats
 

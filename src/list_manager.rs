@@ -11,7 +11,7 @@ const UPDATE_CHUNK_SIZE: usize = 250;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum ListManagerTerm {
-    LastStatus(Days),
+    LastStatus { is_gt: bool, days: Days },
     Mutuals,
 }
 
@@ -26,7 +26,7 @@ impl FromStr for ListManagerTerms {
 
         let whitespace = || sym(b' ').repeat(0..).discard();
         let duration_days =
-            (one_of(b"123456789").repeat(1..2) + one_of(b"dwm")).map(|(number, unit)| {
+            (one_of(b"123456789").repeat(1..3) + one_of(b"dwm")).map(|(number, unit)| {
                 let unit = match unit {
                     b'd' => 1,
                     b'w' => 7,
@@ -38,11 +38,17 @@ impl FromStr for ListManagerTerms {
                 Days::new(number * unit)
             });
 
-        let last_status_at =
-            seq(b"last_status_at>") * duration_days.map(ListManagerTerm::LastStatus);
+        let last_status_at = seq(b"last_status_at")
+            * whitespace()
+            * (one_of(b"<>") + whitespace() * duration_days).map(|(op, days)| {
+                ListManagerTerm::LastStatus {
+                    is_gt: op == b'>',
+                    days,
+                }
+            });
         let mutuals = seq(b"mutuals").map(|_| ListManagerTerm::Mutuals);
         let term = last_status_at | mutuals;
-        let and_symbol = whitespace() + sym(b'&').repeat(1..) + whitespace();
+        let and_symbol = whitespace() * sym(b'&').repeat(1..) * whitespace();
         let and_term = list(term, and_symbol).convert(|terms| match terms.len() {
             0 => Err("empty filter"),
             _ => Ok(ListManagerTerms(terms)),
@@ -78,18 +84,26 @@ impl ListManager {
 
         for term in &self.terms.0 {
             let term_result = match term {
-                ListManagerTerm::LastStatus(days) => api_cache
-                    .get_follows(client)
-                    .await?
-                    .iter()
-                    .filter(|account| {
-                        account
-                            .last_status_at
-                            .map_or(true, |x| x < Local::now().date_naive() - *days)
-                    })
-                    .map(|account| account.id.clone())
-                    .collect(),
-
+                ListManagerTerm::LastStatus { is_gt, days } => {
+                    let is_gt = *is_gt;
+                    let cutoff = Local::now().date_naive() - *days;
+                    api_cache
+                        .get_follows(client)
+                        .await?
+                        .iter()
+                        .filter(|account| {
+                            let Some(last_status_at) = account.last_status_at else {
+                                return is_gt;
+                            };
+                            if is_gt {
+                                last_status_at < cutoff
+                            } else {
+                                last_status_at > cutoff
+                            }
+                        })
+                        .map(|account| account.id.clone())
+                        .collect()
+                }
                 ListManagerTerm::Mutuals => {
                     let follows = api_cache.get_follows(client).await?;
                     let follow_ids = follows.iter().map(|account| account.id.clone()).collect();
@@ -230,27 +244,31 @@ fn parsing() {
     );
     assert_eq!(
         ListManagerTerms::from_str("#last_status_at>2d"),
-        Ok(ListManagerTerms(vec![ListManagerTerm::LastStatus(
-            Days::new(2)
-        )]))
+        Ok(ListManagerTerms(vec![ListManagerTerm::LastStatus {
+            is_gt: true,
+            days: Days::new(2)
+        }]))
     );
     assert_eq!(
         ListManagerTerms::from_str("#last_status_at>1w"),
-        Ok(ListManagerTerms(vec![ListManagerTerm::LastStatus(
-            Days::new(7)
-        )]))
+        Ok(ListManagerTerms(vec![ListManagerTerm::LastStatus {
+            is_gt: true,
+            days: Days::new(7)
+        }]))
     );
     assert_eq!(
-        ListManagerTerms::from_str("#last_status_at>1m"),
-        Ok(ListManagerTerms(vec![ListManagerTerm::LastStatus(
-            Days::new(30)
-        )]))
+        ListManagerTerms::from_str("#last_status_at > 1m"),
+        Ok(ListManagerTerms(vec![ListManagerTerm::LastStatus {
+            is_gt: true,
+            days: Days::new(30)
+        }]))
     );
     assert_eq!(
         ListManagerTerms::from_str("hello #last_status_at>1m"),
-        Ok(ListManagerTerms(vec![ListManagerTerm::LastStatus(
-            Days::new(30)
-        )]))
+        Ok(ListManagerTerms(vec![ListManagerTerm::LastStatus {
+            is_gt: true,
+            days: Days::new(30)
+        }]))
     );
 }
 
@@ -260,14 +278,20 @@ fn parsing_and() {
     assert_eq!(
         ListManagerTerms::from_str("hello #last_status_at>1m&mutuals"),
         Ok(ListManagerTerms(vec![
-            ListManagerTerm::LastStatus(Days::new(30)),
+            ListManagerTerm::LastStatus {
+                is_gt: true,
+                days: Days::new(30)
+            },
             ListManagerTerm::Mutuals
         ]))
     );
     assert_eq!(
         ListManagerTerms::from_str("hello #last_status_at>1m & mutuals"),
         Ok(ListManagerTerms(vec![
-            ListManagerTerm::LastStatus(Days::new(30)),
+            ListManagerTerm::LastStatus {
+                is_gt: true,
+                days: Days::new(30)
+            },
             ListManagerTerm::Mutuals
         ]))
     );
@@ -275,7 +299,10 @@ fn parsing_and() {
     assert_eq!(
         ListManagerTerms::from_str("hello #last_status_at>1m && mutuals"),
         Ok(ListManagerTerms(vec![
-            ListManagerTerm::LastStatus(Days::new(30)),
+            ListManagerTerm::LastStatus {
+                is_gt: true,
+                days: Days::new(30)
+            },
             ListManagerTerm::Mutuals
         ]))
     );
