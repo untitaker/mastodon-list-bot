@@ -12,7 +12,7 @@ out on content from less frequent posters (such as Twitter holdouts, or your
 mutuals).
 
 Mastodon's solution to this is lists, but lists require curation and effort to
-maintain. So what if those lists updated themselves?
+maintain. So what if those lists updated themselves? [Read more about motivation](https://unterwaditzer.net/2023/mastodon-timelines.html)
 
 ## How to use
 
