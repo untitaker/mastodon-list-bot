@@ -1,4 +1,4 @@
-FROM node:21-alpine3.18 as frontend-builder
+FROM node:21-alpine3.20 AS frontend-builder
 
 WORKDIR /app
 COPY package-lock.json package.json buildscript.js ./
@@ -6,7 +6,7 @@ COPY src ./src/
 RUN npm ci
 RUN npm run build
 
-FROM rust:1.72-alpine3.18 as builder
+FROM rust:1.82-alpine3.20 AS builder
 
 RUN mkdir -p ~/.cargo && \
     echo '[registries.crates-io]' > ~/.cargo/config && \
@@ -26,14 +26,15 @@ WORKDIR /app
 COPY Cargo.toml .
 COPY Cargo.lock .
 RUN cargo build --release && rm -rf src/
-RUN strip target/release/mastodon-list-bot
 
 # Copy the source code and run the build again.
 # This should only compile the app itself as the
 # dependencies were already built above.
 COPY . ./
 COPY --from=frontend-builder /app/build/ /app/build/
+COPY --from=frontend-builder /app/node_modules/ /app/node_modules/
 RUN rm ./target/release/deps/mastodon_list_bot* && cargo build --release
+RUN strip target/release/mastodon-list-bot
 
 # Our production image starts here, which uses
 # the files from the builder image above.
