@@ -152,7 +152,7 @@ async fn sync_immediate(
             <p>"Done syncing! Future updates to your lists will happen automatically."</p>
         ),
         SyncImmediateResult::Error { value } => html!(
-            <p class="red">{ text!("Error: {}", value) }</p>
+            <p class="red">{text!("Error: {}", value)}</p>
         ),
         SyncImmediateResult::Pending => html!(
             <p>"Sync ongoing."</p>
@@ -318,20 +318,20 @@ async fn account(
           <input type="hidden" name="host" value=account.host />
           <input type="hidden" name="username" value=account.username />
           <input type="submit" value="Sync now" />
+
+          <p id="sync-result"></p>
         </form>
 
-        <p id="sync-result"></p>
-
-        {if account.failure_count > 0 { html!(
+        {Some(html!(
           <p class="red">{text!("We have encountered {} fatal errors when trying to sync. After 10 attempted sync attempts, we will stop synchronizing.", account.failure_count)}</p>
-        ) } else { html!(<p/>) }}
+        )).filter(|_| account.failure_count > 0)}
 
-        {if let Some(err) = account.last_error { html!(
+        {account.last_error.map(|err| html!(
           <p class="red">
             "The last error we encountered was: "
             <code>{text!("{}", err)}</code>
           </p>
-        ) } else { html!(<p/>) }}
+        ))}
 
         <script src="/htmx.js"></script>
       </div>
