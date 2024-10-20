@@ -15,6 +15,8 @@ pub enum ResponseError {
     Reqwest(#[from] reqwest::Error),
     #[error("failed to construct auth header: {0}")]
     InvalidHeader(#[from] InvalidHeaderValue),
+    #[error("invalid JSON input: {0}")]
+    Json(#[from] serde_json::Error),
 }
 
 impl IntoResponse for ResponseError {

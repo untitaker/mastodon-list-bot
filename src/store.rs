@@ -36,20 +36,20 @@ impl AccountPk {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Account {
-    host: String,
-    username: String,
+    pub host: String,
+    pub username: String,
     #[serde(skip)]
-    token: String,
-    created_at: NaiveDateTime,
-    last_success_at: Option<NaiveDateTime>,
-    failure_count: i64,
-    last_error: Option<String>,
+    pub token: String,
+    pub created_at: NaiveDateTime,
+    pub last_success_at: Option<NaiveDateTime>,
+    pub failure_count: i64,
+    pub last_error: Option<String>,
 }
 
 #[derive(Deserialize)]
 pub struct RegisterAccount {
-    host: String,
-    token: String,
+    pub host: String,
+    pub token: String,
 }
 
 impl Account {
@@ -76,7 +76,7 @@ impl Store {
     }
 
     pub async fn register(&self, account: RegisterAccount) -> Result<Account, ResponseError> {
-        let client = ApiClient::new(&account.host, &account.token)?;
+        let client = ApiClient::new(&account.host, Some(&account.token))?;
 
         let res: CredentialAccount = client
             .get(

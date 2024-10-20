@@ -1,20 +1,12 @@
 import esbuild from "esbuild";
-import sveltePlugin from "esbuild-svelte";
-import sveltePreprocess from "svelte-preprocess";
 
 esbuild
   .build({
-    entryPoints: ["src/app.ts"],
-    mainFields: ["svelte", "browser", "module", "main"],
+    entryPoints: ["src/app.css"],
+    mainFields: ["browser", "module", "main"],
     bundle: true,
     minify: true,
-    format: "esm",
-    outfile: "build/bundle.js",
-    plugins: [
-      sveltePlugin({
-        preprocess: sveltePreprocess()
-      })
-    ],
+    outfile: "build/bundle.css",
     logLevel: "info",
   })
   .catch((error, location) => {

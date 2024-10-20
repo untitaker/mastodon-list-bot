@@ -8,17 +8,12 @@
   "author": "Markus Unterwaditzer <markus-honeypot@unterwaditzer.net>",
   "license": "MIT",
   "dependencies": {
-    "@tsconfig/svelte": "^3.0.0",
     "esbuild": "^0.17.2",
-    "esbuild-svelte": "^0.7.3",
-    "purecss": "^3.0.0",
-    "svelte": "^3.55.1",
-    "svelte-check": "^3.0.3",
-    "svelte-preprocess": "^5.0.1"
+    "htmx.org": "^2.0.3",
+    "purecss": "^3.0.0"
   },
   "scripts": {
     "build": "node buildscript.js",
-    "typecheck": "svelte-check",
     "dev": "find src/ | entr -sr 'npm run build && cargo sqlx prepare --database-url sqlite:accounts.db && cargo run serve --database accounts.db'",
     "fmt": "prettier --write src/ && cargo fmt"
   },

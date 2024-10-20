@@ -10,17 +10,19 @@ use reqwest::{
 use crate::error::ResponseError;
 
 pub struct ApiClient {
-    client: Client,
-    host: String,
+    pub client: Client,
+    pub host: String,
 }
 
 impl ApiClient {
-    pub fn new(host: &str, token: &str) -> Result<Self, ResponseError> {
+    pub fn new(host: &str, token: Option<&str>) -> Result<Self, ResponseError> {
         let mut headers = HeaderMap::new();
-        headers.insert(
-            "Authorization",
-            HeaderValue::from_str(&format!("Bearer {}", token))?,
-        );
+        if let Some(token) = token {
+            headers.insert(
+                "Authorization",
+                HeaderValue::from_str(&format!("Bearer {}", token))?,
+            );
+        }
 
         headers.insert(
             "User-Agent",
