@@ -31,7 +31,7 @@
       {
         "name": "failure_count",
         "ordinal": 5,
-        "type_info": "Int64"
+        "type_info": "Integer"
       },
       {
         "name": "last_error",
