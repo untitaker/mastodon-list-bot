@@ -4,7 +4,6 @@ use std::time::Duration;
 
 use anyhow::Error;
 use api_client::ApiClient;
-use axohtml::{dom::DOMTree, elements::FlowContent, html, text, unsafe_text};
 use axum::{
     body::Body,
     debug_handler,
@@ -14,6 +13,7 @@ use axum::{
     Form, Router,
 };
 use clap::Parser;
+use maud::Markup;
 use serde::{Deserialize, Serialize};
 
 mod api_cache;
@@ -116,29 +116,27 @@ async fn serve(server_cli: Server) -> Result<(), Error> {
 }
 
 async fn index() -> Response {
-    let html = html! {
-      <form class="pure-form pure-form-stacked" action="/account/login" method="post">
-        <label for="host">"Your instance"</label>
-        <input
-          type="text"
-          id="host"
-          class="pure-input-1"
-          required=true
-          name="host"
-          placeholder="e.g. mastodon.social"
-          pattern="[a-zA-Z0-9.:\\-]+"
-          title="Something that looks like a hostname"
-        />
+    let html = maud::html! {
+        form class="pure-form pure-form-stacked" action="/account/login" method="post" {
+            label for="host" { "Your instance" }
+            input
+                type="text"
+                id="host"
+                class="pure-input-1"
+                required
+                name="host"
+                placeholder="e.g. mastodon.social"
+                pattern="[a-zA-Z0-9.:\\-]+"
+                title="Something that looks like a hostname";
 
-        <input
-          type="submit"
-          class="pure-button pure-button-primary"
-          value="Sync Lists"
-        />
-      </form>
+            input
+                type="submit"
+                class="pure-button pure-button-primary"
+                value="Sync Lists";
+        }
     };
 
-    Html(with_site_chrome(html).to_string()).into_response()
+    Html(with_site_chrome(html).into_string()).into_response()
 }
 
 async fn sync_immediate(
@@ -147,22 +145,22 @@ async fn sync_immediate(
 ) -> Result<Response, ResponseError> {
     let body = state.store.sync_immediate(account_pk).await?;
 
-    let html: DOMTree<String> = match body {
-        SyncImmediateResult::Ok => html!(
-            <p>"Done syncing! Future updates to your lists will happen automatically."</p>
-        ),
-        SyncImmediateResult::Error { value } => html!(
-            <p class="red">{text!("Error: {}", value)}</p>
-        ),
-        SyncImmediateResult::Pending => html!(
-            <p>"Sync ongoing."</p>
-        ),
-        SyncImmediateResult::TooMany => html!(
-            <p>"Sync has been done recently, not starting another one."</p>
-        ),
+    let html: maud::Markup = match body {
+        SyncImmediateResult::Ok => maud::html! {
+            p { "Done syncing! Future updates to your lists will happen automatically." }
+        },
+        SyncImmediateResult::Error { value } => maud::html! {
+            p.red { "Error: "(value) }
+        },
+        SyncImmediateResult::Pending => maud::html! {
+            p { "Sync ongoing." }
+        },
+        SyncImmediateResult::TooMany => maud::html! {
+            p { "Sync has been done recently, not starting another one." }
+        },
     };
 
-    Ok(Html(html.to_string()).into_response())
+    Ok(Html(html.into_string()).into_response())
 }
 
 #[derive(Deserialize)]
@@ -284,82 +282,78 @@ async fn account(
 
     let account = state.store.register(register_account).await?;
 
-    let html = html!(
-      <div>
-        // hide account credentials in query string from browser history
-        <script>
-        {unsafe_text!("history.replaceState({}, '', '/');")}
-        </script>
+    let html = maud::html! {
+        div {
+            // hide account credentials in query string from browser history
+            script { "history.replaceState({}, '', '/');" }
 
-        <p class="green">{text!("Hello {}@{}!", account.username, account.host)}</p>
+            p.green { "Hello "(account.username)"@"(account.host)"!" }
 
-        {if let Some(d) = account.last_success_at {
-            html!(<p>{text!("Your last successful sync was at {}", d)}</p>)
-        } else {
-            html!(<p>"Not synced yet."</p>)
-        }}
+            p {
+                @if let Some(d) = account.last_success_at {
+                    "Your last successful sync was at "(d)
+                } else {
+                    "Not synced yet."
+                }
+            }
 
-        <p>
-          "Your lists will be updated once every day automatically. Take a look at the "
-          <a href="https://github.com/untitaker/mastodon-list-bot#how-to-use">"README"</a>
-          " to see which list names are supported. After that, click Sync Now."
-        </p>
+            p {
+                "Your lists will be updated once every day automatically. Take a look at the " a href="https://github.com/untitaker/mastodon-list-bot#how-to-use" { "README" } " to see which list names are supported. After that, click Sync Now."
+            }
 
-        <form
-          class="pure-form"
-          method="post"
-          action="/account/sync-immediate"
-          target="_blank"
-          data-hx-post="/account/sync-immediate"
-          data-hx-swap="innerHTML"
-          data-hx-target="#sync-result"
-          data-hx-disabled-elt="input[type=submit]"
-        >
-          <input type="hidden" name="host" value=account.host />
-          <input type="hidden" name="username" value=account.username />
-          <input type="submit" value="Sync now" />
+            form.pure-form
+            method="post"
+            action="/account/sync-immediate"
+            target="_blank"
+            data-hx-post="/account/sync-immediate"
+            data-hx-swap="innerHTML"
+            data-hx-target="#sync-result"
+            data-hx-disabled-elt="input[type=submit]" {
+                input type="hidden" name="host" value=(account.host);
+                input type="hidden" name="username" value=(account.username);
+                input type="submit" value="Sync now";
+                p id="sync-result";
+            }
 
-          <p id="sync-result"></p>
-        </form>
+            @if account.failure_count > 0 {
+                p.red {
+                    "We have encountered "(account.failure_count)" fatal errors when trying to sync. After 10 attempted sync attempts, we will stop synchronizing."
+                }
+            }
 
-        {Some(html!(
-          <p class="red">{text!("We have encountered {} fatal errors when trying to sync. After 10 attempted sync attempts, we will stop synchronizing.", account.failure_count)}</p>
-        )).filter(|_| account.failure_count > 0)}
+            @if let Some(err) = account.last_error {
+                p.red {
+                    "The last error we encountered was: "(err)
+                }
+            }
 
-        {account.last_error.map(|err| html!(
-          <p class="red">
-            "The last error we encountered was: "
-            <code>{text!("{}", err)}</code>
-          </p>
-        ))}
-
-        <script src="/htmx.js"></script>
-      </div>
-    );
-
-    Ok(Html(with_site_chrome(html).to_string()).into_response())
-}
-
-fn with_site_chrome(content: Box<dyn FlowContent<String>>) -> String {
-    let html = html! {
-      <html lang="en">
-        <head>
-          <title>"Mastodon List Bot"</title>
-          <meta charset="utf-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <link rel="stylesheet" href="/bundle.css" />
-        </head>
-
-        <body>
-          <div class="content">
-            <h1>"Mastodon List Bot"</h1>
-            <p>"Create programmatic lists in "<a href="https://joinmastodon.org">"Mastodon"</a>". Take a look at the "<a href="https://github.com/untitaker/mastodon-list-bot">"GitHub project"</a>" for more information."</p>
-
-            {content}
-          </div>
-        </body>
-      </html>
+            script src="/htmx.js" {}
+        }
     };
 
-    format!("<!DOCTYPE html>\n{html}")
+    Ok(Html(with_site_chrome(html).into_string()).into_response())
+}
+
+fn with_site_chrome(content: Markup) -> Markup {
+    maud::html! {
+        (maud::DOCTYPE)
+        html lang="en" {
+            head {
+                title { "Mastodon List Bot" }
+                meta charset="utf-8";
+                meta name="viewport" content="width=device-width, initial-scale=1";
+                link rel="stylesheet" href="/bundle.css";
+            }
+
+            body {
+                div.content {
+                    h1 { "Mastodon List Bot" }
+                    p {
+                        "Create programmatic lists in " a href="https://joinmastodon.org" { "Mastodon" } ". Take a look at the " a href="https://github.com/untitaker/mastodon-list-bot" { "GitHub project" } " for more information."
+                    }
+                    (content)
+                }
+            }
+        }
+    }
 }
