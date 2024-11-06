@@ -33,7 +33,18 @@ use store::{AccountPk, RegisterAccount, SyncImmediateResult};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    pretty_env_logger::init();
+    use tracing_subscriber::prelude::*;
+
+    let _guard = sentry::init(sentry::ClientOptions {
+        release: sentry::release_name!(),
+        ..sentry::ClientOptions::default()
+    });
+
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer())
+        .with(tracing_subscriber::EnvFilter::from_env("RUST_LOG"))
+        .with(sentry::integrations::tracing::layer())
+        .init();
 
     let cli = Cli::parse();
 
@@ -66,9 +77,9 @@ async fn serve(server_cli: Server) -> Result<(), Error> {
         loop {
             match cronjob_store.sync_all_accounts().await {
                 Ok((success, failure)) => {
-                    log::info!("cronjob: {} success, {} failure", success, failure)
+                    tracing::info!("cronjob: {} success, {} failure", success, failure)
                 }
-                Err(e) => log::error!("failed to run cronjob: {:?}", e),
+                Err(e) => tracing::error!("failed to run cronjob: {:?}", e),
             }
 
             tokio::time::sleep(Duration::from_secs(3600)).await;
@@ -101,7 +112,7 @@ async fn serve(server_cli: Server) -> Result<(), Error> {
         .route("/account", get(account))
         .with_state(state);
 
-    log::info!("listening on {}", socketaddr_str);
+    tracing::info!("listening on {}", socketaddr_str);
     let addr = SocketAddr::from_str(&socketaddr_str).expect("invalid host/port for server");
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();

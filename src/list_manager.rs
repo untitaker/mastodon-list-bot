@@ -133,7 +133,7 @@ impl ListManager {
         client: &ApiClient,
         api_cache: &mut ApiCache,
     ) -> Result<(), Error> {
-        log::info!("syncing list {} ({})", self.list.id, self.list.title);
+        tracing::info!("syncing list {} ({})", self.list.id, self.list.title);
 
         let mut new_member_ids = self.get_new_member_ids(client, api_cache).await?;
 
@@ -174,7 +174,7 @@ impl ListManager {
             .chunks(UPDATE_CHUNK_SIZE)
         {
             let account_ids = account_chunk.to_vec();
-            log::debug!(
+            tracing::debug!(
                 "syncing list {} ({}): adding accounts: {:?}",
                 self.list.id,
                 self.list.title,
@@ -201,7 +201,7 @@ impl ListManager {
 
         for account_chunk in to_delete.chunks(UPDATE_CHUNK_SIZE) {
             let account_ids = account_chunk.to_vec();
-            log::debug!(
+            tracing::debug!(
                 "syncing list {} ({}): deleting accounts: {:?}",
                 self.list.id,
                 self.list.title,
@@ -226,7 +226,7 @@ impl ListManager {
                 .context("failed to remove members")?;
         }
 
-        log::info!(
+        tracing::info!(
             "done syncing, went from {} to {} members",
             num_old_accounts,
             num_new_accounts

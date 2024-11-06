@@ -39,7 +39,7 @@ impl ApiCache {
         {
             let account_ids = account_chunk.to_vec();
 
-            log::debug!("fetching relationships: {:?}", account_ids);
+            tracing::debug!("fetching relationships: {:?}", account_ids);
 
             let chunk_result: Vec<Relationship> = client
                 .get(
@@ -73,7 +73,7 @@ impl ApiCache {
             return Ok(follows);
         }
 
-        log::info!("fetching all your follows");
+        tracing::info!("fetching all your follows");
 
         // TODO: cache that too
         let res: CredentialAccount = client

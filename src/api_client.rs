@@ -85,7 +85,7 @@ impl ApiClient {
                 Ok(response)
             },
             |_err, dur| {
-                log::warn!(
+                tracing::warn!(
                     "[{}] encountered rate limit, backing off for {:?}",
                     self.host,
                     dur

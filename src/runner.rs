@@ -9,7 +9,7 @@ use crate::list_manager::ListManager;
 pub async fn run_once(host: &str, token: &str) -> Result<(), Error> {
     let api_client = ApiClient::new(host, Some(token))?;
 
-    log::info!("fetching all your lists");
+    tracing::info!("fetching all your lists");
 
     let mut url_opt = Some("/api/v1/lists".to_owned());
 

@@ -144,7 +144,7 @@ impl Store {
         let handle = &mut immediate_syncs
             .entry(account_pk.clone())
             .or_insert_with(move || {
-                log::info!("immediate sync for {}", account.primary_key().as_handle());
+                tracing::info!("immediate sync for {}", account.primary_key().as_handle());
                 let slf = self.clone();
                 let account2 = account.clone();
                 let future = async move { slf.run_once_and_log(account).await? };
@@ -220,7 +220,7 @@ impl Store {
         for account in results {
             let account_pk = account.primary_key();
             if self.immediate_syncs.lock().await.contains_key(&account_pk) {
-                log::warn!(
+                tracing::warn!(
                     "skipping cronjob for account {:?}, found immediate sync pending",
                     account_pk
                 );

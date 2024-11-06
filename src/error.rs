@@ -21,7 +21,7 @@ pub enum ResponseError {
 
 impl IntoResponse for ResponseError {
     fn into_response(self) -> Response {
-        log::error!("error while serving request: {}", self);
+        tracing::error!("error while serving request: {}", self);
         (StatusCode::INTERNAL_SERVER_ERROR, format!("{}\n", self)).into_response()
     }
 }
