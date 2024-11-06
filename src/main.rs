@@ -303,7 +303,7 @@ async fn account(
             p {
                 @if let Some(d) = account.last_success_at {
                     "Your last successful sync was at "(d)
-                } else {
+                } @else {
                     "Not synced yet."
                 }
             }
