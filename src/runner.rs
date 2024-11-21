@@ -48,5 +48,7 @@ pub async fn run_once(host: &str, token: &str) -> Result<RunStats, Error> {
         manager.sync_list(&api_client, &mut api_cache).await?;
     }
 
-    Ok(RunStats { list_count: list_managers.len() })
+    Ok(RunStats {
+        list_count: list_managers.len(),
+    })
 }

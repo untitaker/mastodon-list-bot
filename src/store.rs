@@ -182,7 +182,6 @@ impl Store {
                     list_count,
                     account.host,
                     account.username,
-
                 )
                 .execute(&self.pool)
                 .await?;
