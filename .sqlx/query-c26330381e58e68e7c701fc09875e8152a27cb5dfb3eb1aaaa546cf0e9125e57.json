@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "select * from accounts\n            where (last_success_at is not null and failure_count < 10 and last_success_at < datetime('now', '-1 days'))\n            and failure_count < 10\n            limit 10",
+  "query": "select * from accounts\n            where (last_success_at is null or last_success_at < datetime('now', '-1 days'))\n            and failure_count < 10\n            limit 10",
   "describe": {
     "columns": [
       {
@@ -58,5 +58,5 @@
       false
     ]
   },
-  "hash": "99f7d81310d200e13e81f4262645b2eaa35d2f6140218a6142641f95c335cdaa"
+  "hash": "c26330381e58e68e7c701fc09875e8152a27cb5dfb3eb1aaaa546cf0e9125e57"
 }

@@ -214,7 +214,7 @@ impl Store {
         let results = sqlx::query_as!(
             Account,
             "select * from accounts
-            where (last_success_at is not null and failure_count < 10 and last_success_at < datetime('now', '-1 days'))
+            where (last_success_at is null or last_success_at < datetime('now', '-1 days'))
             and failure_count < 10
             limit 10"
         )
