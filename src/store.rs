@@ -106,11 +106,15 @@ impl Store {
             account.host, account.token, account.username, account.created_at, account.last_success_at, account.last_error, account.failure_count, account.list_count,
         ).execute(&self.pool).await?;
 
+        Ok(account)
+    }
+
+    pub async fn get_account(&self, pk: AccountPk) -> Result<Account, ResponseError> {
         let account = sqlx::query_as!(
             Account,
             "select * from accounts where host = ?1 and username = ?2",
-            account.host,
-            account.username
+            pk.host,
+            pk.username
         )
         .fetch_one(&self.pool)
         .await?;

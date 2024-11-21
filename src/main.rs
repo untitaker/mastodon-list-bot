@@ -8,18 +8,20 @@ use axum::{
     body::Body,
     debug_handler,
     extract::{Host, Query, State},
-    response::{Html, IntoResponse, Response},
+    response::{Html, IntoResponse, Redirect, Response},
     routing::{get, post},
     Form, Router,
 };
 use clap::Parser;
 use maud::Markup;
 use serde::{Deserialize, Serialize};
+use tower_sessions::{Expiry, Session};
 
 mod api_cache;
 mod api_client;
 mod api_helpers;
 mod api_models;
+mod auth;
 mod config;
 mod error;
 mod list_manager;
@@ -30,6 +32,9 @@ use config::Server;
 use config::{Cli, Subcommand};
 use error::ResponseError;
 use store::{AccountPk, RegisterAccount, SyncImmediateResult};
+use tower_sessions::{MemoryStore, SessionManagerLayer};
+
+use crate::auth::{LoggedIn, SESSION_COOKIE_KEY};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -86,6 +91,14 @@ async fn serve(server_cli: Server) -> Result<(), Error> {
         }
     });
 
+    let session_store = MemoryStore::default();
+    let session_layer = SessionManagerLayer::new(session_store)
+        .with_secure(!cfg!(debug_assertions))
+        // https://bugzilla.mozilla.org/show_bug.cgi?id=1465402
+        // https://issues.chromium.org/issues/40508226#comment2
+        .with_same_site(tower_sessions::cookie::SameSite::Lax)
+        .with_expiry(Expiry::OnInactivity(time::Duration::seconds(3600)));
+
     let app = Router::new()
         .route("/", get(index))
         // If this line is failing compilation, you need to run 'npm install && npm run build' to get your CSS bundle.
@@ -108,8 +121,11 @@ async fn serve(server_cli: Server) -> Result<(), Error> {
             }),
         )
         .route("/account/login", post(account_login))
+        .route("/account/logout", post(account_logout))
         .route("/account/sync-immediate", post(sync_immediate))
-        .route("/account", get(account))
+        .route("/account/oauth-redirect", get(account_redirect))
+        .route("/account/admin", get(account_admin))
+        .layer(session_layer)
         .with_state(state);
 
     tracing::info!("listening on {}", socketaddr_str);
@@ -152,13 +168,14 @@ async fn index() -> Response {
 
 async fn sync_immediate(
     State(state): State<AppState>,
-    Form(account_pk): Form<AccountPk>,
+    login: LoggedIn,
 ) -> Result<Response, ResponseError> {
+    let account_pk = login.account()?;
     let body = state.store.sync_immediate(account_pk).await?;
 
     let html: maud::Markup = match body {
         SyncImmediateResult::Ok => maud::html! {
-            p { "Done syncing! Future updates to your lists will happen automatically." }
+            p { "Done syncing! Refresh the page to see results. Future updates to your lists will happen automatically." }
         },
         SyncImmediateResult::Error { value } => maud::html! {
             p.red { "Error: "(value) }
@@ -186,12 +203,20 @@ struct OauthState {
     host: String,
 }
 
+fn get_service_uri(Host(self_host): Host) -> String {
+    if cfg!(debug_assertions) {
+        format!("http://{self_host}")
+    } else {
+        format!("https://{self_host}")
+    }
+}
+
 async fn account_login(
-    Host(self_host): Host,
+    self_host: Host,
     Form(AccountRegister { host }): Form<AccountRegister>,
 ) -> Result<Response, ResponseError> {
-    let service_uri = format!("https://{self_host}");
-    let self_redirect_uri = format!("{service_uri}/account");
+    let service_uri = get_service_uri(self_host);
+    let self_redirect_uri = format!("{service_uri}/account/oauth-redirect");
 
     let client = ApiClient::new(&host, None).unwrap();
     let scopes = "read:follows read:lists read:accounts write:lists";
@@ -240,6 +265,12 @@ async fn account_login(
         .unwrap())
 }
 
+#[debug_handler]
+async fn account_logout(session: Session) -> Result<Response, ResponseError> {
+    session.remove::<AccountPk>(SESSION_COOKIE_KEY).await?;
+    Ok(Redirect::to("/").into_response())
+}
+
 #[derive(Deserialize)]
 struct OauthAccountRedirect {
     code: String,
@@ -247,16 +278,17 @@ struct OauthAccountRedirect {
 }
 
 #[debug_handler]
-async fn account(
-    Host(self_host): Host,
+async fn account_redirect(
+    session: Session,
+    self_host: Host,
     State(state): State<AppState>,
     Query(OauthAccountRedirect {
         code,
         state: oauth_state,
     }): Query<OauthAccountRedirect>,
 ) -> Result<Response, ResponseError> {
-    let service_uri = format!("https://{self_host}");
-    let self_redirect_uri = format!("{service_uri}/account");
+    let service_uri = get_service_uri(self_host);
+    let self_redirect_uri = format!("{service_uri}/account/oauth-redirect");
 
     let OauthState {
         client_id,
@@ -292,13 +324,29 @@ async fn account(
     };
 
     let account = state.store.register(register_account).await?;
+    session
+        .insert(SESSION_COOKIE_KEY, account.primary_key())
+        .await?;
+    Ok(Redirect::to("/account/admin").into_response())
+}
+
+#[debug_handler]
+async fn account_admin(
+    State(state): State<AppState>,
+    login: LoggedIn,
+) -> Result<Response, ResponseError> {
+    let account_pk = login.account()?;
+    let account = state.store.get_account(account_pk).await?;
 
     let html = maud::html! {
         div {
-            // hide account credentials in query string from browser history
-            script { "history.replaceState({}, '', '/');" }
-
             p.green { "Hello "(account.username)"@"(account.host)"!" }
+
+            form.pure-form
+                method="post"
+                action="/account/logout" {
+                    input type="submit" value="Logout";
+                }
 
             @if account.failure_count > 0 {
                 p.red {
@@ -320,7 +368,7 @@ async fn account(
             }
 
             p {
-                "Your lists will be updated once every day automatically. Take a look at the " a href="https://github.com/untitaker/mastodon-list-bot#how-to-use" { "README" } " to see which list names are supported. After that, click Sync Now."
+                "Your lists will be updated once per day. Take a look at the " a href="https://github.com/untitaker/mastodon-list-bot#how-to-use" { "README" } " to see which list names are supported. After that, click Sync Now."
             }
 
             form.pure-form
@@ -331,8 +379,6 @@ async fn account(
             data-hx-swap="innerHTML"
             data-hx-target="#sync-result"
             data-hx-disabled-elt="input[type=submit]" {
-                input type="hidden" name="host" value=(account.host);
-                input type="hidden" name="username" value=(account.username);
                 input type="submit" value="Sync now";
                 p id="sync-result";
             }

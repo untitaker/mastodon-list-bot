@@ -1,6 +1,6 @@
 use axum::{
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::{IntoResponse, Redirect, Response},
 };
 use reqwest::header::InvalidHeaderValue;
 use tokio::task::JoinError;
@@ -17,11 +17,20 @@ pub enum ResponseError {
     InvalidHeader(#[from] InvalidHeaderValue),
     #[error("invalid JSON input: {0}")]
     Json(#[from] serde_json::Error),
+    #[error("failed to update session")]
+    Session(#[from] tower_sessions::session::Error),
+    #[error("no login found")]
+    NeedsAuth,
 }
 
 impl IntoResponse for ResponseError {
     fn into_response(self) -> Response {
-        tracing::error!("error while serving request: {}", self);
-        (StatusCode::INTERNAL_SERVER_ERROR, format!("{}\n", self)).into_response()
+        match self {
+            ResponseError::NeedsAuth => Redirect::to("/").into_response(),
+            _ => {
+                tracing::error!("error while serving request: {}", self);
+                (StatusCode::INTERNAL_SERVER_ERROR, format!("{}\n", self)).into_response()
+            }
+        }
     }
 }

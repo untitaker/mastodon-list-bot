@@ -28,3 +28,5 @@ maud = "0.26.0"
 sentry = { version = "0.34.0", features = ["tracing", "reqwest", "rustls"], default-features = false }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+tower-sessions = "0.13.0"
+time = "0.3.36"
