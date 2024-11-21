@@ -23,7 +23,7 @@ RUN cargo build --release && rm -rf src/
 # This should only compile the app itself as the
 # dependencies were already built above.
 COPY . ./
-RUN apk add --no-cache make
+RUN apk add --no-cache make curl
 RUN make static
 RUN rm ./target/release/deps/mastodon_list_bot* && cargo build --release
 RUN strip target/release/mastodon-list-bot
