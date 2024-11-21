@@ -1,5 +1,5 @@
 /target
 .env
-/node_modules/
 accounts.db*
-/build/
+/static/*.js
+/static/*.css
