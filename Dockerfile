@@ -1,11 +1,3 @@
-FROM node:21-alpine3.20 AS frontend-builder
-
-WORKDIR /app
-COPY package-lock.json package.json buildscript.js ./
-COPY src ./src/
-RUN npm ci
-RUN npm run build
-
 FROM rust:1.82-alpine3.20 AS builder
 
 RUN mkdir -p ~/.cargo && \
@@ -31,8 +23,8 @@ RUN cargo build --release && rm -rf src/
 # This should only compile the app itself as the
 # dependencies were already built above.
 COPY . ./
-COPY --from=frontend-builder /app/build/ /app/build/
-COPY --from=frontend-builder /app/node_modules/ /app/node_modules/
+RUN apk add --no-cache make
+RUN make static
 RUN rm ./target/release/deps/mastodon_list_bot* && cargo build --release
 RUN strip target/release/mastodon-list-bot
 

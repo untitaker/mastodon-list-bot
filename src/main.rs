@@ -31,6 +31,7 @@ mod store;
 use config::Server;
 use config::{Cli, Subcommand};
 use error::ResponseError;
+use memory_serve::{load_assets, MemoryServe};
 use store::{AccountPk, RegisterAccount, SyncImmediateResult};
 use tower_sessions::{MemoryStore, SessionManagerLayer};
 
@@ -99,27 +100,11 @@ async fn serve(server_cli: Server) -> Result<(), Error> {
         .with_same_site(tower_sessions::cookie::SameSite::Lax)
         .with_expiry(Expiry::OnInactivity(time::Duration::seconds(3600)));
 
+    let static_files = MemoryServe::new(load_assets!("static")).into_router();
+
     let app = Router::new()
+        .merge(static_files)
         .route("/", get(index))
-        // If this line is failing compilation, you need to run 'npm install && npm run build' to get your CSS bundle.
-        .route(
-            "/bundle.css",
-            get(|| async {
-                (
-                    [("Content-Type", "text/css")],
-                    include_str!("../build/bundle.css"),
-                )
-            }),
-        )
-        .route(
-            "/htmx.js",
-            get(|| async {
-                (
-                    [("Content-Type", "application/javascript")],
-                    include_str!("../node_modules/htmx.org/dist/htmx.min.js"),
-                )
-            }),
-        )
         .route("/account/login", post(account_login))
         .route("/account/logout", post(account_logout))
         .route("/account/sync-immediate", post(sync_immediate))
@@ -144,22 +129,22 @@ async fn serve(server_cli: Server) -> Result<(), Error> {
 
 async fn index() -> Response {
     let html = maud::html! {
-        form class="pure-form pure-form-stacked" action="/account/login" method="post" {
-            label for="host" { "Your instance" }
-            input
-                type="text"
-                id="host"
-                class="pure-input-1"
-                required
-                name="host"
-                placeholder="e.g. mastodon.social"
-                pattern="[a-zA-Z0-9.:\\-]+"
-                title="Something that looks like a hostname";
+        p {
+            "Create programmatic lists in " a href="https://joinmastodon.org" { "Mastodon" } ". Take a look at the " a href="https://github.com/untitaker/mastodon-list-bot" { "GitHub project" } " for more information."
+        }
 
-            input
-                type="submit"
-                class="pure-button pure-button-primary"
-                value="Sync Lists";
+        form action="/account/login" method="post" {
+            fieldset role="group" {
+                input
+                    type="text"
+                    required
+                    name="host"
+                    placeholder="e.g. mastodon.social";
+
+                input
+                    type="submit"
+                    value="Sync Lists";
+            }
         }
     };
 
@@ -340,13 +325,14 @@ async fn account_admin(
 
     let html = maud::html! {
         div {
-            p.green { "Hello "(account.username)"@"(account.host)"!" }
-
-            form.pure-form
-                method="post"
-                action="/account/logout" {
-                    input type="submit" value="Logout";
-                }
+            div.grid {
+                h2 { "Hello "(account.username)"@"(account.host)"!" }
+                form
+                    method="post"
+                    action="/account/logout" {
+                        input.secondary.outline type="submit" value="Logout";
+                    }
+            }
 
             @if account.failure_count > 0 {
                 p.red {
@@ -355,7 +341,7 @@ async fn account_admin(
             }
 
             @if let Some(err) = account.last_error {
-                p.red {
+                p."pico-color-red-500" {
                     "The last error we encountered was: "(err)
                 }
             }
@@ -371,15 +357,15 @@ async fn account_admin(
                 "Your lists will be updated once per day. Take a look at the " a href="https://github.com/untitaker/mastodon-list-bot#how-to-use" { "README" } " to see which list names are supported. After that, click Sync Now."
             }
 
-            form.pure-form
+            form
             method="post"
             action="/account/sync-immediate"
             target="_blank"
             data-hx-post="/account/sync-immediate"
             data-hx-swap="innerHTML"
             data-hx-target="#sync-result"
-            data-hx-disabled-elt="input[type=submit]" {
-                input type="submit" value="Sync now";
+            data-hx-disabled-elt="#sync-now" {
+                input id="sync-now" type="submit" value="Sync now";
                 p id="sync-result";
             }
 
@@ -398,15 +384,16 @@ fn with_site_chrome(content: Markup) -> Markup {
                 title { "Mastodon List Bot" }
                 meta charset="utf-8";
                 meta name="viewport" content="width=device-width, initial-scale=1";
-                link rel="stylesheet" href="/bundle.css";
+                link rel="stylesheet" href="/pico.css";
+                link rel="stylesheet" href="/pico.colors.css";
             }
 
             body {
-                div.content {
+                header.container {
                     h1 { "Mastodon List Bot" }
-                    p {
-                        "Create programmatic lists in " a href="https://joinmastodon.org" { "Mastodon" } ". Take a look at the " a href="https://github.com/untitaker/mastodon-list-bot" { "GitHub project" } " for more information."
-                    }
+                }
+
+                main.container {
                     (content)
                 }
             }
