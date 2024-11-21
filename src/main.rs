@@ -300,12 +300,23 @@ async fn account(
 
             p.green { "Hello "(account.username)"@"(account.host)"!" }
 
-            p {
-                @if let Some(d) = account.last_success_at {
-                    "Your last successful sync was at "(d)
-                } @else {
-                    "Not synced yet."
+            @if account.failure_count > 0 {
+                p.red {
+                    "We have encountered "(account.failure_count)" fatal errors when trying to sync. After 10 attempts, we will stop synchronizing."
                 }
+            }
+
+            @if let Some(err) = account.last_error {
+                p.red {
+                    "The last error we encountered was: "(err)
+                }
+            }
+
+            @if let Some(d) = account.last_success_at {
+                p { "Your last successful sync was at "(d)"." }
+                p { (account.list_count)" dynamic lists were found." }
+            } @else {
+                p { "Not synced yet." }
             }
 
             p {
@@ -324,18 +335,6 @@ async fn account(
                 input type="hidden" name="username" value=(account.username);
                 input type="submit" value="Sync now";
                 p id="sync-result";
-            }
-
-            @if account.failure_count > 0 {
-                p.red {
-                    "We have encountered "(account.failure_count)" fatal errors when trying to sync. After 10 attempted sync attempts, we will stop synchronizing."
-                }
-            }
-
-            @if let Some(err) = account.last_error {
-                p.red {
-                    "The last error we encountered was: "(err)
-                }
             }
 
             script src="/htmx.js" {}

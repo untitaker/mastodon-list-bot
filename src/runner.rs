@@ -6,7 +6,11 @@ use crate::api_helpers::get_next_link;
 use crate::api_models::List;
 use crate::list_manager::ListManager;
 
-pub async fn run_once(host: &str, token: &str) -> Result<(), Error> {
+pub struct RunStats {
+    pub list_count: usize,
+}
+
+pub async fn run_once(host: &str, token: &str) -> Result<RunStats, Error> {
     let api_client = ApiClient::new(host, Some(token))?;
 
     tracing::info!("fetching all your lists");
@@ -35,14 +39,14 @@ pub async fn run_once(host: &str, token: &str) -> Result<(), Error> {
     }
 
     if list_managers.is_empty() {
-        return Ok(());
+        return Ok(RunStats { list_count: 0 });
     }
 
     let mut api_cache = ApiCache::default();
 
-    for mut manager in list_managers {
+    for manager in &mut list_managers {
         manager.sync_list(&api_client, &mut api_cache).await?;
     }
 
-    Ok(())
+    Ok(RunStats { list_count: list_managers.len() })
 }

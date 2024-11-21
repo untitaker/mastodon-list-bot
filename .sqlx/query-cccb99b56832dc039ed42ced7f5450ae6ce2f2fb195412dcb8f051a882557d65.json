@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "insert into accounts ( host, token, username, created_at, last_success_at, last_error, failure_count, list_count ) values ( ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8 )\n            on conflict do update\n            set token = ?2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 8
+    },
+    "nullable": []
+  },
+  "hash": "cccb99b56832dc039ed42ced7f5450ae6ce2f2fb195412dcb8f051a882557d65"
+}

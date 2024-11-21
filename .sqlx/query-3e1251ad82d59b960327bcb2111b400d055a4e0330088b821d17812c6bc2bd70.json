@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "update accounts set\n                    last_success_at = datetime('now'),\n                    list_count = ?1,\n                    failure_count = 0,\n                    last_error = null\n                    where host = ?2 and username = ?3\n                    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "3e1251ad82d59b960327bcb2111b400d055a4e0330088b821d17812c6bc2bd70"
+}

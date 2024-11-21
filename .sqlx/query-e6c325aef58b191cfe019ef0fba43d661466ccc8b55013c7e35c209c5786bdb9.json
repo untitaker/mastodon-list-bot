@@ -37,6 +37,11 @@
         "name": "last_error",
         "ordinal": 6,
         "type_info": "Text"
+      },
+      {
+        "name": "list_count",
+        "ordinal": 7,
+        "type_info": "Integer"
       }
     ],
     "parameters": {
@@ -49,7 +54,8 @@
       false,
       true,
       false,
-      true
+      true,
+      false
     ]
   },
   "hash": "e6c325aef58b191cfe019ef0fba43d661466ccc8b55013c7e35c209c5786bdb9"

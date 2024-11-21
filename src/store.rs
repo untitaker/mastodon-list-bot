@@ -34,19 +34,18 @@ impl AccountPk {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone)]
 pub struct Account {
     pub host: String,
     pub username: String,
-    #[serde(skip)]
     pub token: String,
     pub created_at: NaiveDateTime,
     pub last_success_at: Option<NaiveDateTime>,
     pub failure_count: i64,
     pub last_error: Option<String>,
+    pub list_count: i64,
 }
 
-#[derive(Deserialize)]
 pub struct RegisterAccount {
     pub host: String,
     pub token: String,
@@ -96,14 +95,15 @@ impl Store {
             last_success_at: None,
             last_error: None,
             failure_count: 0,
+            list_count: 0,
         };
 
         // XXX: ugly
         sqlx::query!(
-            "insert into accounts ( host, token, username, created_at, last_success_at, last_error, failure_count ) values ( ?1, ?2, ?3, ?4, ?5, ?6, ?7 )
+            "insert into accounts ( host, token, username, created_at, last_success_at, last_error, failure_count, list_count ) values ( ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8 )
             on conflict do update
             set token = ?2",
-            account.host, account.token, account.username, account.created_at, account.last_success_at, account.last_error, account.failure_count
+            account.host, account.token, account.username, account.created_at, account.last_success_at, account.last_error, account.failure_count, account.list_count,
         ).execute(&self.pool).await?;
 
         let account = sqlx::query_as!(
@@ -169,16 +169,20 @@ impl Store {
 
     async fn run_once_and_log(&self, account: Account) -> Result<Result<(), Error>, ResponseError> {
         match crate::runner::run_once(&account.host, &account.token).await {
-            Ok(()) => {
+            Ok(stats) => {
+                let list_count = stats.list_count as i64;
                 sqlx::query!(
                     "update accounts set
                     last_success_at = datetime('now'),
+                    list_count = ?1,
                     failure_count = 0,
                     last_error = null
-                    where host = ?1 and username = ?2
+                    where host = ?2 and username = ?3
                     ",
+                    list_count,
                     account.host,
                     account.username,
+
                 )
                 .execute(&self.pool)
                 .await?;
