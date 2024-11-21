@@ -19,11 +19,6 @@ jobs:
 
       - run: cargo fmt --check
 
-      - uses: volta-cli/action@v4
-
-      - run: npm ci
-      - run: npm run build
-
       - uses: actions/cache@v3
         with:
           path: |
@@ -32,6 +27,7 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: dtolnay/rust-toolchain@stable
+      - run: make static
       - run: cargo build
       - run: cargo test
       - run: cargo clippy -- -D warnings
