@@ -52,7 +52,7 @@ specified string. For example, it is permitted to name a list `My best friends
 "machine-readable configuration" is still there. There can currently however
 only be one `#` in the name.
 
-## Self-hosting
+## Self-hosting (CLI)
 
 list-bot comes as a CLI to put into crontab, and as a webservice. For
 single-user purposes, it's probably easier to run it from the CLI.
@@ -68,9 +68,7 @@ RUST_LOG=info cargo run run-once --host=mastodon.social --token=...
 Your lists are now populated with new accounts. Run this program periodically
 to update it (this both adds and removes accounts).
 
-## Caveats
-
-This bot hammers the API a lot during sync. It is likely that while it is
+This tool hammers the API a lot during sync. It is likely that while it is
 running, it will encounter rate limits, which it will handle gracefully. Do not
 run this program more than once per day.
 
