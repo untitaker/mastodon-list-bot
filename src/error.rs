@@ -21,6 +21,8 @@ pub enum ResponseError {
     Session(#[from] tower_sessions::session::Error),
     #[error("no login found")]
     NeedsAuth,
+    #[error("invalid base64")]
+    Base64(#[from] data_encoding::DecodeError),
 }
 
 impl IntoResponse for ResponseError {

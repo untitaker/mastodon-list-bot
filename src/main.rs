@@ -240,6 +240,7 @@ async fn account_login(
     // the same name/website/logo. backend-less SPAs already work like this, and it's a waste of
     // resources to make a separate "tokens" table mapping host -> client ID/secret
     let state = serde_json::to_string(&state).unwrap();
+    let state = data_encoding::BASE64URL_NOPAD.encode(state.as_bytes());
 
     let foreign_redirect_uri = format!("https://{host}/oauth/authorize?scope={scopes}&response_type=code&redirect_uri={self_redirect_uri}&client_id={client_id}&client_secret={client_secret}&state={state}");
 
@@ -275,11 +276,12 @@ async fn account_redirect(
     let service_uri = get_service_uri(self_host);
     let self_redirect_uri = format!("{service_uri}/account/oauth-redirect");
 
+    let oauth_state = data_encoding::BASE64URL_NOPAD.decode(oauth_state.as_bytes())?;
     let OauthState {
         client_id,
         client_secret,
         host,
-    } = serde_json::from_str(&oauth_state)?;
+    } = serde_json::from_slice(&oauth_state)?;
     let client = ApiClient::new(&host, None).unwrap();
 
     #[derive(Deserialize)]
