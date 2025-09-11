@@ -43,6 +43,7 @@ async fn main() -> Result<(), Error> {
 
     let _guard = sentry::init(sentry::ClientOptions {
         release: sentry::release_name!(),
+        enable_logs: true,
         ..sentry::ClientOptions::default()
     });
 
