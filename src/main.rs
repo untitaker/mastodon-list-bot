@@ -14,6 +14,7 @@ use axum::{
 };
 use clap::Parser;
 use maud::Markup;
+use sentry::integrations::tracing::EventFilter;
 use serde::{Deserialize, Serialize};
 use tower_sessions::{Expiry, Session};
 
@@ -50,7 +51,12 @@ async fn main() -> Result<(), Error> {
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
         .with(tracing_subscriber::EnvFilter::from_env("RUST_LOG"))
-        .with(sentry::integrations::tracing::layer())
+        .with(
+            sentry::integrations::tracing::layer().event_filter(|md| match *md.level() {
+                tracing::Level::ERROR => EventFilter::Event | EventFilter::Log,
+                _ => EventFilter::Log,
+            }),
+        )
         .init();
 
     let cli = Cli::parse();
